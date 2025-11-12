@@ -18,6 +18,24 @@ interface FormSchema {
 }
 
 export const api = {
+  // Add this missing method
+  async getResponses(): Promise<EmployeeResponse[]> {
+    console.log('🔄 Fetching responses from API...');
+    const response = await fetch(`${API_BASE_URL}/responses`);
+    
+    console.log('📡 Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Failed to fetch responses:', errorText);
+      throw new Error(`Failed to fetch responses: ${response.status} ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Responses fetched successfully, count:', data.length);
+    return data;
+  },
+
   async createResponse(data: Omit<EmployeeResponse, '_id' | 'timestamp'>): Promise<{ id: string }> {
     console.log('📤 Creating response with data:', data);
     

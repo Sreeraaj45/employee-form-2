@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { MongoClient, ObjectId } from 'mongodb';
+import mongodb from 'mongodb';
+const { MongoClient, ObjectId } = mongodb;
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -16,21 +17,25 @@ const connectionString = process.env.VITE_MONGODB_URI;
 const client = new MongoClient(connectionString);
 let db;
 
+// In your server.js, update the initializeDatabase function
 const initializeDatabase = async () => {
   try {
     await client.connect();
     db = client.db(process.env.VITE_MONGODB_DATABASE || 'employee_skills');
-    console.log('Connected to MongoDB/Cosmos DB successfully');
+    
+    // Test the connection
+    await db.command({ ping: 1 });
+    console.log('✅ Connected to MongoDB/Cosmos DB successfully');
     
     // Create indexes for better performance
     await db.collection('employee_responses').createIndex({ email: 1 });
     await db.collection('employee_responses').createIndex({ employee_id: 1 });
     await db.collection('employee_responses').createIndex({ timestamp: -1 });
-    await db.collection('form_schemas').createIndex({ version: -1 });
     
-    console.log('Database indexes initialized successfully');
+    console.log('✅ Database indexes initialized successfully');
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('❌ Error initializing database:', error);
+    console.error('🔍 Connection string:', connectionString ? 'Present' : 'Missing');
   }
 };
 
