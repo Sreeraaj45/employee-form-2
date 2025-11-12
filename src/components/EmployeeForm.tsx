@@ -127,8 +127,8 @@ export default function EmployeeForm() {
       const existing = prev.skillRatings.find(sr => sr.skill === skill && sr.section === section);
       const newRatings = existing
         ? prev.skillRatings.map(sr =>
-            sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
-          )
+          sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
+        )
         : [...prev.skillRatings, { skill, section, rating }];
       return { ...prev, skillRatings: newRatings };
     });
@@ -207,7 +207,7 @@ export default function EmployeeForm() {
 
       <div className="max-w-5xl mx-auto px-6 relative z-10">
         {/* Header */}
-        <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-3xl shadow-2xl p-10 text-white mb-12 flex items-center justify-between">
+        <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-xl shadow-xl p-10 text-white mb-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <img
               src="src/assets/logo.png"
@@ -230,7 +230,7 @@ export default function EmployeeForm() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Personal Info */}
-          <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
+          <section className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg p-8 border border-slate-100">
             <h2 className="text-2xl font-bold mb-6 text-slate-800">Personal Info</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <input
@@ -261,20 +261,26 @@ export default function EmployeeForm() {
           </section>
 
           {/* Progress Bar */}
-          <div className="w-full h-6 bg-slate-200 rounded-full overflow-hidden relative">
-            <div
-              className={`h-full bg-gradient-to-r ${currentColor} transition-all duration-700 ease-in-out`}
-              style={{ width: `${progress}%` }}
-            ></div>
-            <span className="absolute inset-0 flex justify-center items-center text-sm font-semibold text-slate-700">
+          <div className="flex items-center gap-4 ">
+            {/* Step Counter (moved outside the bar, left side) */}
+            <span className="text-sm font-semibold text-slate-700 min-w-[90px] text-right">
               Step {currentStep + 1} of {totalSteps}
             </span>
+
+            {/* Progress Bar */}
+            <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden relative">
+              <div
+                className={`h-full bg-gradient-to-r ${currentColor} transition-[width] duration-700 ease-in-out`}
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
           </div>
+
           {/* Skill Sections */}
           {currentStep < sectionKeys.length ? (
             <div
               key={currentSectionKey}
-              className="rounded-2xl overflow-hidden shadow-xl bg-white"
+              className="rounded-xl overflow-hidden shadow-xl bg-white"
             >
               <div
                 className={`w-full flex justify-between items-center px-6 py-5 bg-gradient-to-r ${currentColor} text-white font-semibold text-lg`}
@@ -319,11 +325,10 @@ export default function EmployeeForm() {
               type="button"
               onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
               disabled={currentStep === 0}
-              className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${
-                currentStep === 0
+              className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${currentStep === 0
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
-              }`}
+                }`}
             >
               Previous
             </button>
