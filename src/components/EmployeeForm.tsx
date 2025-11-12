@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckCircle,
   AlertCircle,
+  ChevronDown,
   Code2,
   BarChart3,
   Brain,
@@ -10,9 +11,7 @@ import {
   Layout,
   Server,
   Settings,
-  ChevronLeft,
-  ChevronRight,
-  Star
+  Sparkles
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import confetti from 'canvas-confetti';
@@ -20,17 +19,20 @@ import confetti from 'canvas-confetti';
 const SKILL_SECTIONS = {
   programming: {
     title: 'Programming Skills',
-    icon: <Code2 className="w-5 h-5 text-gray-700" />,
-    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark', 'Other']
+    icon: <Code2 className="w-6 h-6" />,
+    color: 'from-sky-400 to-emerald-400',
+    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark']
   },
   dataAnalytics: {
     title: 'Data Analytics',
-    icon: <BarChart3 className="w-5 h-5 text-gray-700" />,
+    icon: <BarChart3 className="w-6 h-6" />,
+    color: 'from-amber-400 to-pink-400',
     skills: ['Power BI / Tableau', 'Visualization Libraries', 'SQL', 'NoSQL']
   },
   dataScience: {
     title: 'Data Science',
-    icon: <Brain className="w-5 h-5 text-gray-700" />,
+    icon: <Brain className="w-6 h-6" />,
+    color: 'from-indigo-400 to-purple-400',
     skills: [
       'Data Modelling (ML Algorithms)',
       'Statistics',
@@ -41,7 +43,8 @@ const SKILL_SECTIONS = {
   },
   dataEngineering: {
     title: 'Data Engineering',
-    icon: <Database className="w-5 h-5 text-gray-700" />,
+    icon: <Database className="w-6 h-6" />,
+    color: 'from-orange-400 to-yellow-400',
     skills: [
       'AWS',
       'GCP',
@@ -50,12 +53,14 @@ const SKILL_SECTIONS = {
       'Kubernetes',
       'PySpark',
       'Docker',
-      'NoSQL'
+      'NoSQL',
+      'flyte'
     ]
   },
   aiDL: {
     title: 'AI / Deep Learning',
-    icon: <Cpu className="w-5 h-5 text-gray-700" />,
+    icon: <Cpu className="w-6 h-6" />,
+    color: 'from-fuchsia-400 to-rose-400',
     skills: [
       'TensorFlow',
       'PyTorch',
@@ -66,7 +71,8 @@ const SKILL_SECTIONS = {
   },
   frontend: {
     title: 'Frontend Development',
-    icon: <Layout className="w-5 h-5 text-gray-700" />,
+    icon: <Layout className="w-6 h-6" />,
+    color: 'from-cyan-400 to-blue-400',
     skills: [
       'HTML',
       'CSS',
@@ -80,12 +86,14 @@ const SKILL_SECTIONS = {
   },
   backend: {
     title: 'Backend Development',
-    icon: <Server className="w-5 h-5 text-gray-700" />,
+    icon: <Server className="w-6 h-6" />,
+    color: 'from-teal-400 to-green-400',
     skills: ['Django', 'Flask', 'FastAPI', 'Spring Boot', 'ASP.NET', 'Express.js']
   },
   devops: {
     title: 'DevOps',
-    icon: <Settings className="w-5 h-5 text-gray-700" />,
+    icon: <Settings className="w-6 h-6" />,
+    color: 'from-gray-400 to-slate-500',
     skills: ['Jenkins', 'CI/CD', 'Kubernetes', 'Docker']
   }
 };
@@ -99,8 +107,6 @@ const RATING_LABELS = {
 };
 
 export default function EmployeeForm() {
-  const sections = Object.entries(SKILL_SECTIONS);
-  const [currentSection, setCurrentSection] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     employeeId: '',
@@ -108,17 +114,25 @@ export default function EmployeeForm() {
     skillRatings: [] as { skill: string; rating: number; section: string }[],
     additionalSkills: ''
   });
+  const [expandedSections, setExpandedSections] = useState(
+    Object.keys(SKILL_SECTIONS).reduce(
+      (acc, key) => ({ ...acc, [key]: false }),
+      {} as Record<string, boolean>
+    )
+  );
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'success' | 'error' | null>(null);
-  const [showSummary, setShowSummary] = useState(false);
+
+  const toggleSection = (section: string) =>
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
 
   const handleRatingChange = (skill: string, section: string, rating: number) => {
     setFormData(prev => {
       const existing = prev.skillRatings.find(sr => sr.skill === skill && sr.section === section);
       const newRatings = existing
         ? prev.skillRatings.map(sr =>
-            sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
-          )
+          sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
+        )
         : [...prev.skillRatings, { skill, section, rating }];
       return { ...prev, skillRatings: newRatings };
     });
@@ -127,16 +141,10 @@ export default function EmployeeForm() {
   const getRating = (skill: string, section: string) =>
     formData.skillRatings.find(sr => sr.skill === skill && sr.section === section)?.rating || 0;
 
-  const handleNext = () => setCurrentSection(prev => Math.min(prev + 1, sections.length - 1));
-  const handlePrev = () => setCurrentSection(prev => Math.max(prev - 1, 0));
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowSummary(true);
-  };
-
-  const confirmSubmit = async () => {
     setLoading(true);
+    setStatus(null);
     try {
       const { error } = await supabase.from('employee_responses').insert([
         {
@@ -150,14 +158,14 @@ export default function EmployeeForm() {
         }
       ]);
       if (error) throw error;
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-      setStatus('success');
+
       setFormData({ name: '', employeeId: '', email: '', skillRatings: [], additionalSkills: '' });
+      setStatus('success');
+      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
     } catch (err) {
       console.error(err);
       setStatus('error');
     } finally {
-      setShowSummary(false);
       setLoading(false);
       setTimeout(() => setStatus(null), 4000);
     }
@@ -166,25 +174,27 @@ export default function EmployeeForm() {
   const StarRating = ({ skill, section }: { skill: string; section: string }) => {
     const rating = getRating(skill, section);
     return (
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col gap-1">
         <div className="flex gap-1">
           {[1, 2, 3, 4, 5].map(star => (
             <button
               key={star}
               type="button"
               onClick={() => handleRatingChange(skill, section, star)}
-              className="transition-transform hover:scale-110"
+              className="group transition-transform hover:scale-110"
             >
-              <Star
-                className={`w-6 h-6 ${
-                  star <= rating ? 'fill-gray-800 text-gray-800' : 'fill-gray-200 text-gray-200'
-                }`}
-              />
+              <svg
+                className={`w-7 h-7 ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200'
+                  }`}
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
             </button>
           ))}
         </div>
         {rating > 0 && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-slate-600 text-center font-medium">
             {RATING_LABELS[rating as keyof typeof RATING_LABELS]}
           </span>
         )}
@@ -192,195 +202,145 @@ export default function EmployeeForm() {
     );
   };
 
-  const progressPercent = ((currentSection + 1) / sections.length) * 100;
-
   return (
-    <div
-      className="min-h-screen py-10"
-      style={{
-        background:
-          'linear-gradient(to right, #FFFDE4, #005AA7)',
-      }}
-    >
-      <div className="max-w-3xl mx-auto px-4 bg-white/80 backdrop-blur-md p-8 rounded-[4px] border border-white/40">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-12 relative overflow-hidden">
+      {/* Floating background blobs */}
+      <div className="absolute -top-24 -left-20 w-72 h-72 bg-pink-200 opacity-30 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 opacity-30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+
+      <div className="max-w-5xl mx-auto px-6 relative z-10">
         {/* Header */}
-        <header className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Employee Skill Mapping Survey</h1>
-          <p className="text-gray-600 text-sm mt-1">A concise, professional skill assessment</p>
+        <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-3xl shadow-2xl p-10 text-white mb-12 flex items-center justify-between">
+          {/* Left Logo Section */}
+          <div className="flex items-center gap-4">
+            <img
+              src="src/assets/logo.png"
+              alt="Logo"
+              className="w-20 h-20 rounded-full shadow-lg border-2 border-white/60 hover:scale-110 transition-transform duration-300"
+            />
+          </div>
+
+          {/* Center Title Section */}
+          <div className="text-center flex flex-col items-center flex-1">
+            <h1 className="text-4xl font-extrabold flex justify-center items-center gap-3">
+              <Sparkles className="w-8 h-8 animate-spin-slow" />
+              Employee Skill Mapping Survey
+              <Sparkles className="w-8 h-8 animate-spin-slow" />
+            </h1>
+            <p className="text-white/80 mt-2 font-medium">
+              Let’s explore your superpowers 🌈
+            </p>
+          </div>
         </header>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Info */}
-          <section className="border border-gray-200 rounded-[4px] p-5 bg-white/90">
-            <div className="flex justify-between items-start flex-wrap gap-6">
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold mb-4">Personal Information</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    className="p-2 border border-gray-300 rounded-[4px] focus:outline-none focus:ring-1 focus:ring-gray-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Employee ID"
-                    value={formData.employeeId}
-                    onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
-                    required
-                    className="p-2 border border-gray-300 rounded-[4px] focus:outline-none focus:ring-1 focus:ring-gray-500"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email Address"
-                    value={formData.email}
-                    onChange={e => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    className="p-2 border border-gray-300 rounded-[4px] focus:outline-none focus:ring-1 focus:ring-gray-500 md:col-span-2"
-                  />
-                </div>
-              </div>
 
-              {/* Subtle Legend */}
-              <div className="text-sm text-gray-700 bg-gray-100/60 p-4 rounded-[4px] shadow-inner w-full md:w-64">
-                <div className="flex items-center gap-2 mb-2">
-                  <Star className="w-4 h-4 text-gray-700" />
-                  <p className="font-semibold">Rating Legend</p>
-                </div>
-                <ul className="space-y-1 text-gray-600">
-                  {Object.entries(RATING_LABELS).map(([k, v]) => (
-                    <li key={k} className="flex items-center gap-2">
-                      {[...Array(Number(k))].map((_, i) => (
-                        <Star
-                          key={i}
-                          className="w-3 h-3 text-gray-500 fill-gray-500"
-                        />
-                      ))}
-                      <span className="text-xs">{v}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Personal Info */}
+          <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
+            <h2 className="text-2xl font-bold mb-6 text-slate-800">Personal Info</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={formData.name}
+                required
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                className="p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none"
+              />
+              <input
+                type="text"
+                placeholder="Employee ID (Ex: IET - 1234)"
+                value={formData.employeeId}
+                required
+                onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
+                className="p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none"
+              />
+              <input
+                type="email"
+                placeholder="emqail.address@ielektron.com"
+                value={formData.email}
+                required
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                className="p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none md:col-span-2"
+              />
             </div>
           </section>
 
-          {/* Skill Wizard */}
-          <section className="border border-gray-200 rounded-[4px] p-5 bg-white/90">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                {sections[currentSection][1].icon}
-                {sections[currentSection][1].title}
-              </h3>
-              <div className="text-sm text-gray-500 flex flex-col items-end">
-                <span>
-                  Section {currentSection + 1} of {sections.length}
-                </span>
-                <div className="w-32 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                  <div
-                    className="h-1 bg-gray-800 transition-all"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {sections[currentSection][1].skills.map(skill => (
-                <div
-                  key={skill}
-                  className="flex justify-between items-center border-b border-gray-100 pb-2"
-                >
-                  <span>{skill}</span>
-                  <StarRating skill={skill} section={sections[currentSection][0]} />
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between mt-6">
+          {/* Skill Sections */}
+          {Object.entries(SKILL_SECTIONS).map(([key, section]) => (
+            <div key={key} className="rounded-2xl overflow-hidden shadow-xl bg-white">
               <button
                 type="button"
-                onClick={handlePrev}
-                disabled={currentSection === 0}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-[4px] text-gray-600 disabled:opacity-40"
+                onClick={() => toggleSection(key)}
+                className={`w-full flex justify-between items-center px-6 py-5 bg-gradient-to-r ${section.color} text-white font-semibold text-lg`}
               >
-                <ChevronLeft size={18} /> Previous
+                <div className="flex items-center gap-3">{section.icon}{section.title}</div>
+                <ChevronDown
+                  className={`transition-transform ${expandedSections[key] ? 'rotate-180' : ''}`}
+                />
               </button>
-
-              {currentSection < sections.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-[4px] text-gray-600"
-                >
-                  Next <ChevronRight size={18} />
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-800 text-gray-800 rounded-[4px]"
-                >
-                  Review & Submit
-                </button>
+              {expandedSections[key] && (
+                <div className="p-6 space-y-5 bg-white">
+                  {section.skills.map(skill => (
+                    <div
+                      key={skill}
+                      className="flex justify-between items-center p-4 bg-slate-50 rounded-xl hover:bg-sky-50 transition"
+                    >
+                      <p className="font-medium text-slate-700">{skill}</p>
+                      <StarRating skill={skill} section={key} />
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
+          ))}
+
+          {/* Additional Skills */}
+          <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">
+              Additional Skills & Certifications
+            </h2>
+            <textarea
+              rows={4}
+              placeholder="Tell us about other awesome things you can do..."
+              value={formData.additionalSkills}
+              onChange={e => setFormData({ ...formData, additionalSkills: e.target.value })}
+              className="w-full p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none resize-none"
+            />
           </section>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-gradient-to-r from-sky-400 to-indigo-400 text-white font-bold text-lg rounded-2xl shadow-lg hover:from-sky-500 hover:to-indigo-500 transition-transform hover:scale-[1.02] disabled:opacity-60"
+          >
+            {loading ? 'Submitting...' : 'Submit Assessment'}
+          </button>
         </form>
 
-        {/* Review Popup */}
-        {showSummary && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/30">
-            <div className="bg-white rounded-[4px] p-6 w-full max-w-lg border border-gray-200">
-              <h3 className="text-lg font-semibold mb-4">Review Your Submission</h3>
-              <div className="text-sm text-gray-700 space-y-3 max-h-96 overflow-y-auto border-t border-gray-100 pt-3">
-                <p><strong>Name:</strong> {formData.name}</p>
-                <p><strong>Employee ID:</strong> {formData.employeeId}</p>
-                <p><strong>Email:</strong> {formData.email}</p>
-                <p><strong>Additional Skills:</strong> {formData.additionalSkills || '—'}</p>
-                <hr className="my-2" />
-                {formData.skillRatings.map((sr, i) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span>{sr.skill}</span>
-                    <span className="text-gray-500">
-                      {RATING_LABELS[sr.rating as keyof typeof RATING_LABELS]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  onClick={() => setShowSummary(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-[4px] text-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmSubmit}
-                  disabled={loading}
-                  className="px-4 py-2 border border-gray-800 text-gray-800 rounded-[4px]"
-                >
-                  {loading ? 'Submitting...' : 'Confirm & Submit'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Status messages */}
+        {/* Toasts */}
         {status === 'success' && (
-          <div className="fixed bottom-6 right-6 bg-gray-800 text-white px-4 py-2 rounded-[4px] flex items-center gap-2">
-            <CheckCircle size={18} /> Submitted successfully
+          <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce-in">
+            <CheckCircle /> <span>Assessment submitted successfully 🎉</span>
           </div>
         )}
         {status === 'error' && (
-          <div className="fixed bottom-6 right-6 bg-red-600 text-white px-4 py-2 rounded-[4px] flex items-center gap-2">
-            <AlertCircle size={18} /> Error submitting form
+          <div className="fixed bottom-6 right-6 bg-rose-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce-in">
+            <AlertCircle /> <span>Oops! Something went wrong 😢</span>
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes bounce-in {
+          from { transform: translateY(40px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-bounce-in { animation: bounce-in 0.5s ease-out; }
+        .animate-spin-slow { animation: spin 8s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
