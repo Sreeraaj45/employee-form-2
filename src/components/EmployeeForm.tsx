@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   CheckCircle,
   AlertCircle,
@@ -107,6 +107,10 @@ const RATING_LABELS = {
 };
 
 export default function EmployeeForm() {
+  const sectionKeys = Object.keys(SKILL_SECTIONS);
+  const totalSteps = sectionKeys.length + 1; // +1 for Additional Skills
+  const [currentStep, setCurrentStep] = useState(0);
+
   const [formData, setFormData] = useState({
     name: '',
     employeeId: '',
@@ -114,25 +118,17 @@ export default function EmployeeForm() {
     skillRatings: [] as { skill: string; rating: number; section: string }[],
     additionalSkills: ''
   });
-  const [expandedSections, setExpandedSections] = useState(
-    Object.keys(SKILL_SECTIONS).reduce(
-      (acc, key) => ({ ...acc, [key]: false }),
-      {} as Record<string, boolean>
-    )
-  );
+
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'success' | 'error' | null>(null);
-
-  const toggleSection = (section: string) =>
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
 
   const handleRatingChange = (skill: string, section: string, rating: number) => {
     setFormData(prev => {
       const existing = prev.skillRatings.find(sr => sr.skill === skill && sr.section === section);
       const newRatings = existing
         ? prev.skillRatings.map(sr =>
-          sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
-        )
+            sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
+          )
         : [...prev.skillRatings, { skill, section, rating }];
       return { ...prev, skillRatings: newRatings };
     });
@@ -154,8 +150,8 @@ export default function EmployeeForm() {
         skill_ratings: formData.skillRatings,
         additional_skills: formData.additionalSkills
       });
-
       setFormData({ name: '', employeeId: '', email: '', skillRatings: [], additionalSkills: '' });
+      setCurrentStep(0);
       setStatus('success');
       confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
     } catch (err) {
@@ -198,6 +194,11 @@ export default function EmployeeForm() {
     );
   };
 
+  const currentSectionKey = sectionKeys[currentStep] || 'additional';
+  const currentSection = SKILL_SECTIONS[currentSectionKey];
+  const currentColor = currentSection?.color || 'from-sky-400 to-indigo-400';
+  const progress = ((currentStep + 1) / totalSteps) * 100;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-12 relative overflow-hidden">
       {/* Floating background blobs */}
@@ -207,7 +208,6 @@ export default function EmployeeForm() {
       <div className="max-w-5xl mx-auto px-6 relative z-10">
         {/* Header */}
         <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-3xl shadow-2xl p-10 text-white mb-12 flex items-center justify-between">
-          {/* Left Logo Section */}
           <div className="flex items-center gap-4">
             <img
               src="src/assets/logo.png"
@@ -216,7 +216,6 @@ export default function EmployeeForm() {
             />
           </div>
 
-          {/* Center Title Section */}
           <div className="text-center flex flex-col items-center flex-1">
             <h1 className="text-4xl font-extrabold flex justify-center items-center gap-3">
               <Sparkles className="w-8 h-8 animate-spin-slow" />
@@ -229,8 +228,6 @@ export default function EmployeeForm() {
           </div>
         </header>
 
-
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Personal Info */}
           <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
@@ -254,7 +251,7 @@ export default function EmployeeForm() {
               />
               <input
                 type="email"
-                placeholder="emqail.address@ielektron.com"
+                placeholder="email.address@ielektron.com"
                 value={formData.email}
                 required
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -263,56 +260,92 @@ export default function EmployeeForm() {
             </div>
           </section>
 
+          {/* Progress Bar */}
+          <div className="w-full h-6 bg-slate-200 rounded-full overflow-hidden relative">
+            <div
+              className={`h-full bg-gradient-to-r ${currentColor} transition-all duration-700 ease-in-out`}
+              style={{ width: `${progress}%` }}
+            ></div>
+            <span className="absolute inset-0 flex justify-center items-center text-sm font-semibold text-slate-700">
+              Step {currentStep + 1} of {totalSteps}
+            </span>
+          </div>
           {/* Skill Sections */}
-          {Object.entries(SKILL_SECTIONS).map(([key, section]) => (
-            <div key={key} className="rounded-2xl overflow-hidden shadow-xl bg-white">
+          {currentStep < sectionKeys.length ? (
+            <div
+              key={currentSectionKey}
+              className="rounded-2xl overflow-hidden shadow-xl bg-white"
+            >
+              <div
+                className={`w-full flex justify-between items-center px-6 py-5 bg-gradient-to-r ${currentColor} text-white font-semibold text-lg`}
+              >
+                <div className="flex items-center gap-3">
+                  {currentSection.icon}
+                  {currentSection.title}
+                </div>
+              </div>
+
+              <div className="p-6 space-y-5 bg-white">
+                {currentSection.skills.map(skill => (
+                  <div
+                    key={skill}
+                    className="flex justify-between items-center p-4 bg-slate-50 rounded-xl hover:bg-sky-50 transition"
+                  >
+                    <p className="font-medium text-slate-700">{skill}</p>
+                    <StarRating skill={skill} section={currentSectionKey} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            // Additional Skills Section
+            <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
+              <h2 className="text-xl font-bold text-slate-800 mb-4">
+                Additional Skills
+              </h2>
+              <textarea
+                rows={4}
+                placeholder="Tell us about other awesome things you can do..."
+                value={formData.additionalSkills}
+                onChange={e => setFormData({ ...formData, additionalSkills: e.target.value })}
+                className="w-full p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none resize-none"
+              />
+            </section>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+              disabled={currentStep === 0}
+              className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${
+                currentStep === 0
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
+              }`}
+            >
+              Previous
+            </button>
+
+            {currentStep < totalSteps - 1 ? (
               <button
                 type="button"
-                onClick={() => toggleSection(key)}
-                className={`w-full flex justify-between items-center px-6 py-5 bg-gradient-to-r ${section.color} text-white font-semibold text-lg`}
+                onClick={() => setCurrentStep(prev => Math.min(totalSteps - 1, prev + 1))}
+                className={`px-6 py-3 rounded-xl font-semibold text-white shadow-md bg-gradient-to-r ${currentColor} transition-transform hover:scale-105`}
               >
-                <div className="flex items-center gap-3">{section.icon}{section.title}</div>
-                <ChevronDown
-                  className={`transition-transform ${expandedSections[key] ? 'rotate-180' : ''}`}
-                />
+                Next
               </button>
-              {expandedSections[key] && (
-                <div className="p-6 space-y-5 bg-white">
-                  {section.skills.map(skill => (
-                    <div
-                      key={skill}
-                      className="flex justify-between items-center p-4 bg-slate-50 rounded-xl hover:bg-sky-50 transition"
-                    >
-                      <p className="font-medium text-slate-700">{skill}</p>
-                      <StarRating skill={skill} section={key} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Additional Skills */}
-          <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
-            <h2 className="text-xl font-bold text-slate-800 mb-4">
-              Additional Skills & Certifications
-            </h2>
-            <textarea
-              rows={4}
-              placeholder="Tell us about other awesome things you can do..."
-              value={formData.additionalSkills}
-              onChange={e => setFormData({ ...formData, additionalSkills: e.target.value })}
-              className="w-full p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none resize-none"
-            />
-          </section>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-gradient-to-r from-sky-400 to-indigo-400 text-white font-bold text-lg rounded-2xl shadow-lg hover:from-sky-500 hover:to-indigo-500 transition-transform hover:scale-[1.02] disabled:opacity-60"
-          >
-            {loading ? 'Submitting...' : 'Submit Assessment'}
-          </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-8 py-3 bg-gradient-to-r from-sky-400 to-indigo-400 text-white font-bold text-lg rounded-2xl shadow-lg hover:from-sky-500 hover:to-indigo-500 transition-transform hover:scale-[1.02] disabled:opacity-60"
+              >
+                {loading ? 'Submitting...' : 'Submit Assessment'}
+              </button>
+            )}
+          </div>
         </form>
 
         {/* Toasts */}
@@ -328,6 +361,7 @@ export default function EmployeeForm() {
         )}
       </div>
 
+      {/* Animations */}
       <style>{`
         @keyframes bounce-in {
           from { transform: translateY(40px); opacity: 0; }
