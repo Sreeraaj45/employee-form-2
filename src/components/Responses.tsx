@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Edit2, Save, X, Loader } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface EmployeeResponse {
   name: string;
@@ -27,14 +27,8 @@ export default function Responses() {
   const loadResponses = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('employee_responses')
-        .select('*')
-        .order('timestamp', { ascending: false });
-
-      if (error) throw error;
-
-      const formattedData = (data || []).map(row => ({
+      const data = await api.getResponses();
+      const formattedData = data.map(row => ({
         name: row.name,
         employeeId: row.employee_id,
         email: row.email,
@@ -42,7 +36,7 @@ export default function Responses() {
         skillRatings: row.skill_ratings || [],
         additionalSkills: row.additional_skills || '',
         timestamp: row.timestamp,
-        id: row.id
+        id: String(row.id)
       })) as (EmployeeResponse & { id: string })[];
 
       setResponses(formattedData);
@@ -56,13 +50,7 @@ export default function Responses() {
   const handleDelete = async (id: string) => {
     setDeleting(true);
     try {
-      const { error } = await supabase
-        .from('employee_responses')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await api.deleteResponse(parseInt(id));
       setResponses(responses.filter(r => (r as any).id !== id));
       setShowDeleteModal(null);
     } catch (err) {
@@ -79,19 +67,14 @@ export default function Responses() {
 
   const saveEdit = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('employee_responses')
-        .update({
-          name: editData.name,
-          employee_id: editData.employeeId,
-          email: editData.email,
-          selected_skills: editData.selectedSkills,
-          skill_ratings: editData.skillRatings,
-          additional_skills: editData.additionalSkills
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+      await api.updateResponse(parseInt(id), {
+        name: editData.name,
+        employee_id: editData.employeeId,
+        email: editData.email,
+        selected_skills: editData.selectedSkills,
+        skill_ratings: editData.skillRatings,
+        additional_skills: editData.additionalSkills
+      });
 
       const updated = responses.map(r =>
         (r as any).id === id ? { ...editData, timestamp: r.timestamp, id } : r

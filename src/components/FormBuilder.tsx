@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trash2, Plus, Edit2, Save, X, ChevronUp, ChevronDown, Loader } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface Field {
   id: string;
@@ -36,15 +36,9 @@ export default function FormBuilder() {
   const loadSchema = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('form_schemas')
-        .select('id, schema')
-        .maybeSingle();
-
-      if (error) throw error;
-
+      const data = await api.getSchema();
       if (data) {
-        setSchemaId(data.id);
+        setSchemaId(String(data.id));
         if (data.schema && Array.isArray(data.schema)) {
           setFields(data.schema);
         }
@@ -61,22 +55,11 @@ export default function FormBuilder() {
     setSaving(true);
     try {
       if (schemaId) {
-        const { error } = await supabase
-          .from('form_schemas')
-          .update({ schema: updatedFields, version: new Date().getTime() })
-          .eq('id', schemaId);
-
-        if (error) throw error;
+        await api.updateSchema(parseInt(schemaId), updatedFields);
       } else {
-        const { data, error } = await supabase
-          .from('form_schemas')
-          .insert([{ schema: updatedFields }])
-          .select('id')
-          .single();
-
-        if (error) throw error;
+        const data = await api.createSchema(updatedFields);
         if (data) {
-          setSchemaId(data.id);
+          setSchemaId(String(data.id));
         }
       }
       setFields(updatedFields);

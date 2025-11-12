@@ -13,7 +13,7 @@ import {
   Settings,
   Sparkles
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import confetti from 'canvas-confetti';
 
 const SKILL_SECTIONS = {
@@ -146,18 +146,14 @@ export default function EmployeeForm() {
     setLoading(true);
     setStatus(null);
     try {
-      const { error } = await supabase.from('employee_responses').insert([
-        {
-          name: formData.name,
-          employee_id: formData.employeeId,
-          email: formData.email,
-          selected_skills: formData.skillRatings.map(sr => sr.skill),
-          skill_ratings: formData.skillRatings,
-          additional_skills: formData.additionalSkills,
-          timestamp: new Date().toISOString()
-        }
-      ]);
-      if (error) throw error;
+      await api.createResponse({
+        name: formData.name,
+        employee_id: formData.employeeId,
+        email: formData.email,
+        selected_skills: formData.skillRatings.map(sr => sr.skill),
+        skill_ratings: formData.skillRatings,
+        additional_skills: formData.additionalSkills
+      });
 
       setFormData({ name: '', employeeId: '', email: '', skillRatings: [], additionalSkills: '' });
       setStatus('success');

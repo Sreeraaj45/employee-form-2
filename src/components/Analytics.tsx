@@ -13,7 +13,7 @@ import { Loader } from "lucide-react";
 import * as am4core from "@amcharts/amcharts4/core";
 import * as am4charts from "@amcharts/amcharts4/charts";
 import am4themes_animated from "@amcharts/amcharts4/themes/animated";
-import { supabase } from "../lib/supabase";
+import { api } from "../lib/api";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -45,13 +45,8 @@ export default function Analytics() {
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('employee_responses')
-        .select('*');
-
-      if (error) throw error;
-
-      const parsed = (data || []).map(row => ({
+      const data = await api.getResponses();
+      const parsed = data.map(row => ({
         name: row.name,
         employeeId: row.employee_id,
         email: row.email,
