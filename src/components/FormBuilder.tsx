@@ -38,7 +38,7 @@ export default function FormBuilder() {
     try {
       const data = await api.getSchema();
       if (data) {
-        setSchemaId(String(data.id));
+        setSchemaId(data._id || null);
         if (data.schema && Array.isArray(data.schema)) {
           setFields(data.schema);
         }
@@ -59,7 +59,7 @@ export default function FormBuilder() {
       } else {
         const data = await api.createSchema(updatedFields);
         if (data) {
-          setSchemaId(String(data.id));
+          setSchemaId(data.id);
         }
       }
       setFields(updatedFields);

@@ -3,12 +3,13 @@ import { Trash2, Edit2, Save, X, Loader } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface EmployeeResponse {
+  _id?: string;
   name: string;
-  employeeId: string;
+  employee_id: string;
   email: string;
-  selectedSkills: string[];
-  skillRatings: Array<{ skill: string; rating: number }>;
-  additionalSkills: string;
+  selected_skills: string[];
+  skill_ratings: Array<{ skill: string; rating: number }>;
+  additional_skills: string;
   timestamp: string;
 }
 
@@ -28,18 +29,8 @@ export default function Responses() {
     setLoading(true);
     try {
       const data = await api.getResponses();
-      const formattedData = data.map(row => ({
-        name: row.name,
-        employeeId: row.employee_id,
-        email: row.email,
-        selectedSkills: row.selected_skills || [],
-        skillRatings: row.skill_ratings || [],
-        additionalSkills: row.additional_skills || '',
-        timestamp: row.timestamp,
-        id: String(row.id)
-      })) as (EmployeeResponse & { id: string })[];
-
-      setResponses(formattedData);
+      // MongoDB data is already in correct format
+      setResponses(data);
     } catch (err) {
       console.error('Error loading responses:', err);
     } finally {
@@ -51,7 +42,7 @@ export default function Responses() {
     setDeleting(true);
     try {
       await api.deleteResponse(parseInt(id));
-      setResponses(responses.filter(r => (r as any).id !== id));
+      setResponses(responses.filter(r => r._id !== id));
       setShowDeleteModal(null);
     } catch (err) {
       console.error('Error deleting response:', err);
@@ -61,7 +52,7 @@ export default function Responses() {
   };
 
   const startEdit = (response: EmployeeResponse) => {
-    setEditingId((response as any).id);
+    setEditingId(response._id || null);
     setEditData({ ...response });
   };
 
@@ -69,15 +60,15 @@ export default function Responses() {
     try {
       await api.updateResponse(parseInt(id), {
         name: editData.name,
-        employee_id: editData.employeeId,
+        employee_id: editData.employee_id,
         email: editData.email,
-        selected_skills: editData.selectedSkills,
-        skill_ratings: editData.skillRatings,
-        additional_skills: editData.additionalSkills
+        selected_skills: editData.selected_skills,
+        skill_ratings: editData.skill_ratings,
+        additional_skills: editData.additional_skills
       });
 
       const updated = responses.map(r =>
-        (r as any).id === id ? { ...editData, timestamp: r.timestamp, id } : r
+        r._id === id ? { ...editData, timestamp: r.timestamp, _id: id } as EmployeeResponse : r
       );
       setResponses(updated);
       setEditingId(null);
@@ -140,7 +131,7 @@ export default function Responses() {
             </thead>
             <tbody>
               {responses.map((response) => {
-                const responseId = (response as any).id;
+                const responseId = response._id!;
                 return (
                 <tr key={responseId} className="border-b border-gray-200 hover:bg-gray-50">
                   {editingId === responseId ? (
@@ -154,8 +145,8 @@ export default function Responses() {
                       </td>
                       <td className="px-6 py-4">
                         <input
-                          value={editData.employeeId || ''}
-                          onChange={(e) => setEditData({ ...editData, employeeId: e.target.value })}
+                          value={editData.employee_id || ''}
+                          onChange={(e) => setEditData({ ...editData, employee_id: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </td>
@@ -168,7 +159,7 @@ export default function Responses() {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex flex-wrap gap-1">
-                          {editData.selectedSkills?.map((skill, i) => (
+                          {editData.selected_skills?.map((skill, i) => (
                             <span key={i} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
                               {skill}
                             </span>
@@ -177,7 +168,7 @@ export default function Responses() {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="space-y-1">
-                          {editData.skillRatings?.map((sr, i) => (
+                          {editData.skill_ratings?.map((sr, i) => (
                             <div key={i} className="text-xs">
                               {sr.skill}: <span className="font-semibold">{sr.rating}★</span>
                             </div>
@@ -186,8 +177,8 @@ export default function Responses() {
                       </td>
                       <td className="px-6 py-4">
                         <textarea
-                          value={editData.additionalSkills || ''}
-                          onChange={(e) => setEditData({ ...editData, additionalSkills: e.target.value })}
+                          value={editData.additional_skills || ''}
+                          onChange={(e) => setEditData({ ...editData, additional_skills: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           rows={2}
                         />
@@ -212,11 +203,11 @@ export default function Responses() {
                   ) : (
                     <>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">{response.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700">{response.employeeId}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{response.employee_id}</td>
                       <td className="px-6 py-4 text-sm text-gray-700">{response.email}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex flex-wrap gap-1">
-                          {response.selectedSkills.map((skill, i) => (
+                          {response.selected_skills.map((skill, i) => (
                             <span key={i} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
                               {skill}
                             </span>
@@ -225,7 +216,7 @@ export default function Responses() {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="space-y-1">
-                          {response.skillRatings.map((sr, i) => (
+                          {response.skill_ratings.map((sr, i) => (
                             <div key={i} className="text-xs">
                               {sr.skill}: <span className="font-semibold">{sr.rating}★</span>
                             </div>
@@ -233,7 +224,7 @@ export default function Responses() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700 max-w-xs">
-                        <div className="line-clamp-2">{response.additionalSkills || '—'}</div>
+                        <div className="line-clamp-2">{response.additional_skills || '—'}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">

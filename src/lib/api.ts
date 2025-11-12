@@ -1,7 +1,7 @@
 const API_BASE_URL = 'http://localhost:3001/api';
 
 interface EmployeeResponse {
-  id?: number;
+  _id?: string;
   name: string;
   employee_id: string;
   email: string;
@@ -12,7 +12,7 @@ interface EmployeeResponse {
 }
 
 interface FormSchema {
-  id?: number;
+  _id?: string;
   schema: any;
   version?: number;
 }
@@ -24,7 +24,7 @@ export const api = {
     return response.json();
   },
 
-  async createResponse(data: Omit<EmployeeResponse, 'id' | 'timestamp'>): Promise<{ id: number }> {
+  async createResponse(data: Omit<EmployeeResponse, '_id' | 'timestamp'>): Promise<{ id: string }> {
     const response = await fetch(`${API_BASE_URL}/responses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -70,7 +70,7 @@ export const api = {
     return response.json();
   },
 
-  async createSchema(schema: any): Promise<{ id: number }> {
+  async createSchema(schema: any): Promise<{ id: string }> {
     const response = await fetch(`${API_BASE_URL}/schemas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

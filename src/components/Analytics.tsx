@@ -20,12 +20,13 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 am4core.useTheme(am4themes_animated);
 
 interface EmployeeResponse {
+  _id?: string;
   name: string;
-  employeeId: string;
+  employee_id: string;
   email: string;
-  selectedSkills: string[];
-  skillRatings: Array<{ skill: string; rating: number }>;
-  additionalSkills: string;
+  selected_skills: string[];
+  skill_ratings: Array<{ skill: string; rating: number }>;
+  additional_skills: string;
   timestamp: string;
 }
 
@@ -46,18 +47,9 @@ export default function Analytics() {
     setLoading(true);
     try {
       const data = await api.getResponses();
-      const parsed = data.map(row => ({
-        name: row.name,
-        employeeId: row.employee_id,
-        email: row.email,
-        selectedSkills: row.selected_skills || [],
-        skillRatings: row.skill_ratings || [],
-        additionalSkills: row.additional_skills || '',
-        timestamp: row.timestamp
-      })) as EmployeeResponse[];
-
-      setResponses(parsed);
-      analyzeSkills(parsed);
+      // MongoDB data is already in the correct format, no need to parse
+      setResponses(data);
+      analyzeSkills(data);
     } catch (err) {
       console.error('Error loading analytics:', err);
     } finally {
@@ -69,14 +61,14 @@ export default function Analytics() {
     const skillMap = new Map<string, { count: number; totalRating: number; ratingCount: number }>();
 
     responseData.forEach((response) => {
-      response.selectedSkills.forEach((skill) => {
+      response.selected_skills.forEach((skill) => {
         if (!skillMap.has(skill)) {
           skillMap.set(skill, { count: 0, totalRating: 0, ratingCount: 0 });
         }
         const skillData = skillMap.get(skill)!;
         skillData.count++;
 
-        const rating = response.skillRatings.find((sr) => sr.skill === skill);
+        const rating = response.skill_ratings.find((sr) => sr.skill === skill);
         if (rating) {
           skillData.totalRating += rating.rating;
           skillData.ratingCount++;
@@ -159,7 +151,7 @@ export default function Analytics() {
     const chart = am4core.create(chartRef.current, am4charts.PieChart3D);
     chart.hiddenState.properties.opacity = 0;
 
-    // Remove legend since we’re already showing labels
+    // Remove legend since we're already showing labels
     chart.legend = undefined;
 
     // Chart Data
@@ -326,4 +318,3 @@ export default function Analytics() {
     </div>
   );
 }
- 
