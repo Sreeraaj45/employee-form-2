@@ -38,44 +38,48 @@ export default function Responses() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setDeleting(true);
-    try {
-      await api.deleteResponse(parseInt(id));
-      setResponses(responses.filter(r => r._id !== id));
-      setShowDeleteModal(null);
-    } catch (err) {
-      console.error('Error deleting response:', err);
-    } finally {
-      setDeleting(false);
-    }
-  };
+  
 
   const startEdit = (response: EmployeeResponse) => {
     setEditingId(response._id || null);
     setEditData({ ...response });
   };
 
-  const saveEdit = async (id: string) => {
-    try {
-      await api.updateResponse(parseInt(id), {
-        name: editData.name,
-        employee_id: editData.employee_id,
-        email: editData.email,
-        selected_skills: editData.selected_skills,
-        skill_ratings: editData.skill_ratings,
-        additional_skills: editData.additional_skills
-      });
+  const handleDelete = async (id: string) => {
+  setDeleting(true);
+  try {
+    // Remove parseInt - use the string ID directly
+    await api.deleteResponse(id);
+    setResponses(responses.filter(r => r._id !== id));
+    setShowDeleteModal(null);
+  } catch (err) {
+    console.error('Error deleting response:', err);
+  } finally {
+    setDeleting(false);
+  }
+};
 
-      const updated = responses.map(r =>
-        r._id === id ? { ...editData, timestamp: r.timestamp, _id: id } as EmployeeResponse : r
-      );
-      setResponses(updated);
-      setEditingId(null);
-    } catch (err) {
-      console.error('Error updating response:', err);
-    }
-  };
+const saveEdit = async (id: string) => {
+  try {
+    // Remove parseInt - use the string ID directly
+    await api.updateResponse(id, {
+      name: editData.name,
+      employee_id: editData.employee_id,
+      email: editData.email,
+      selected_skills: editData.selected_skills,
+      skill_ratings: editData.skill_ratings,
+      additional_skills: editData.additional_skills
+    });
+
+    const updated = responses.map(r =>
+      r._id === id ? { ...editData, timestamp: r.timestamp, _id: id } as EmployeeResponse : r
+    );
+    setResponses(updated);
+    setEditingId(null);
+  } catch (err) {
+    console.error('Error updating response:', err);
+  }
+};
 
   if (loading) {
     return (

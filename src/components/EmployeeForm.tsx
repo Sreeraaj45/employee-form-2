@@ -137,8 +137,25 @@ export default function EmployeeForm() {
   const getRating = (skill: string, section: string) =>
     formData.skillRatings.find(sr => sr.skill === skill && sr.section === section)?.rating || 0;
 
+  const validateForm = () => {
+  if (!formData.name.trim()) return 'Name is required';
+  if (!formData.employeeId.trim()) return 'Employee ID is required';
+  if (!formData.email.trim()) return 'Email is required';
+  if (!formData.email.includes('@ielektron.com')) return 'Please use company email';
+  if (formData.skillRatings.length === 0) return 'Please rate at least one skill';
+  return null;
+};
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+     const validationError = validateForm();
+  if (validationError) {
+    setStatus('error');
+    // You might want to show this error in UI
+    console.error(validationError);
+    return;
+  }
     setLoading(true);
     setStatus(null);
     try {
