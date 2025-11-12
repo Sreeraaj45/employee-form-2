@@ -30,7 +30,7 @@ export default function DashboardLayout({
                 {activeTab === 'responses' && 'Responses'}
                 {activeTab === 'analytics' && 'Analytics Dashboard'}
               </h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 mt-1 mb-1">
                 {activeTab === 'builder' && 'Customize your employee form'}
                 {activeTab === 'responses' && 'Employee form responses'}
                 {activeTab === 'analytics' && 'Employee form insights & skill statistics'}

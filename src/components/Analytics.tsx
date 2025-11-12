@@ -206,10 +206,10 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
+        {/* <div>
           <h2 className="text-3xl font-bold text-gray-800">Analytics Dashboard</h2>
           <p className="text-gray-600 mt-1">Employee form insights & skill statistics</p>
-        </div>
+        </div> */}
         <div className="bg-white rounded-lg shadow-lg p-12 flex items-center justify-center gap-3">
           <Loader size={24} className="animate-spin text-blue-600" />
           <span className="text-gray-600">Loading analytics...</span>
@@ -220,10 +220,10 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <div>
+      {/* <div>
         <h2 className="text-3xl font-bold text-gray-800">Analytics Dashboard</h2>
         <p className="text-gray-600 mt-1">Employee form insights & skill statistics</p>
-      </div>
+      </div> */}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

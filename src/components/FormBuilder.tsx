@@ -124,10 +124,10 @@ export default function FormBuilder() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
+        {/* <div>
           <h2 className="text-3xl font-bold text-gray-800">Form Builder</h2>
           <p className="text-gray-600 mt-1">Customize your employee form</p>
-        </div>
+        </div> */}
         <div className="bg-white rounded-lg shadow-lg p-12 flex items-center justify-center gap-3">
           <Loader size={24} className="animate-spin text-blue-600" />
           <span className="text-gray-600">Loading form schema...</span>
@@ -139,10 +139,10 @@ export default function FormBuilder() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
+        {/* <div>
           <h2 className="text-3xl font-bold text-gray-800">Form Builder</h2>
           <p className="text-gray-600 mt-1">Customize your employee form</p>
-        </div>
+        </div> */}
         {saving && (
           <div className="flex items-center gap-2 text-blue-600">
             <Loader size={20} className="animate-spin" />
