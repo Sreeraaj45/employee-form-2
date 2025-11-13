@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'; 
 import {
   CheckCircle,
   AlertCircle,
@@ -11,7 +11,8 @@ import {
   Layout,
   Server,
   Settings,
-  Sparkles
+  Sparkles,
+  Eye
 } from 'lucide-react';
 import { api } from '../lib/api';
 import confetti from 'canvas-confetti';
@@ -108,7 +109,7 @@ const RATING_LABELS = {
 
 export default function EmployeeForm() {
   const sectionKeys = Object.keys(SKILL_SECTIONS);
-  const totalSteps = sectionKeys.length + 1; // +1 for Additional Skills
+  const totalSteps = sectionKeys.length + 2; // +1 for Additional Skills, +1 for Review
   const [currentStep, setCurrentStep] = useState(0);
 
   const [formData, setFormData] = useState({
@@ -127,8 +128,8 @@ export default function EmployeeForm() {
       const existing = prev.skillRatings.find(sr => sr.skill === skill && sr.section === section);
       const newRatings = existing
         ? prev.skillRatings.map(sr =>
-          sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
-        )
+            sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
+          )
         : [...prev.skillRatings, { skill, section, rating }];
       return { ...prev, skillRatings: newRatings };
     });
@@ -146,13 +147,10 @@ export default function EmployeeForm() {
     return null;
   };
 
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     const validationError = validateForm();
     if (validationError) {
       setStatus('error');
-      // You might want to show this error in UI
       console.error(validationError);
       return;
     }
@@ -193,8 +191,9 @@ export default function EmployeeForm() {
               className="group transition-transform hover:scale-110"
             >
               <svg
-                className={`w-7 h-7 ${star <= rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200'
-                  }`}
+                className={`w-7 h-7 ${
+                  star <= rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200'
+                }`}
                 viewBox="0 0 24 24"
               >
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -218,35 +217,28 @@ export default function EmployeeForm() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-12 relative overflow-hidden">
-      {/* Floating background blobs */}
       <div className="absolute -top-24 -left-20 w-72 h-72 bg-pink-200 opacity-30 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 opacity-30 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
       <div className="max-w-5xl mx-auto px-6 relative z-10">
-        {/* Header */}
         <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-xl shadow-xl p-10 text-white mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src="src/assets/logo.png"
-              alt="Logo"
-              className="w-20 h-20 rounded-full shadow-lg border-2 border-white/60 hover:scale-110 transition-transform duration-300"
-            />
-          </div>
-
+          <img
+            src="src/assets/logo.png"
+            alt="Logo"
+            className="w-20 h-20 rounded-full shadow-lg border-2 border-white/60 hover:scale-110 transition-transform duration-300"
+          />
           <div className="text-center flex flex-col items-center flex-1">
             <h1 className="text-4xl font-extrabold flex justify-center items-center gap-3">
               <Sparkles className="w-8 h-8 animate-spin-slow" />
               Employee Skill Mapping Survey
               <Sparkles className="w-8 h-8 animate-spin-slow" />
             </h1>
-            <p className="text-white/80 mt-2 font-medium">
-              Let’s explore your superpowers 🌈
-            </p>
+            <p className="text-white/80 mt-2 font-medium">Let’s explore your superpowers 🌈</p>
           </div>
         </header>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Personal Info */}
+        {/* Content */}
+        <form onSubmit={e => e.preventDefault()} className="space-y-8">
           <section className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg p-8 border border-slate-100">
             <h2 className="text-2xl font-bold mb-6 text-slate-800">Personal Info</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -265,21 +257,15 @@ export default function EmployeeForm() {
                 required
                 onChange={e => {
                   let value = e.target.value;
-
-                  // Ensure it always starts with "IET - "
-                  if (!value.startsWith("IET - ")) {
-                    value = "IET - " + value.replace(/^IET\s*-\s*/i, ""); // Remove other variants
+                  if (!value.startsWith('IET - ')) {
+                    value = 'IET - ' + value.replace(/^IET\s*-\s*/i, '');
                   }
-
-                  // Prevent lowercase or space errors
-                  value = "IET - " + value.slice(6).replace(/[^0-9]/g, ""); // Allow only numbers after the prefix
-
+                  value = 'IET - ' + value.slice(6).replace(/[^0-9]/g, '');
                   setFormData({ ...formData, employeeId: value });
                 }}
                 className="p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none"
                 maxLength={12}
               />
-
               <input
                 type="email"
                 placeholder="email.address@ielektron.com"
@@ -291,14 +277,11 @@ export default function EmployeeForm() {
             </div>
           </section>
 
-          {/* Progress Bar */}
-          <div className="flex items-center gap-4 ">
-            {/* Step Counter (moved outside the bar, left side) */}
+          {/* Progress */}
+          <div className="flex items-center gap-4">
             <span className="text-sm font-semibold text-slate-700 min-w-[90px] text-right">
               Step {currentStep + 1} of {totalSteps}
             </span>
-
-            {/* Progress Bar */}
             <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden relative">
               <div
                 className={`h-full bg-gradient-to-r ${currentColor} transition-[width] duration-700 ease-in-out`}
@@ -307,12 +290,10 @@ export default function EmployeeForm() {
             </div>
           </div>
 
-          {/* Skill Sections */}
+          {/* Skill/Additional/Review Sections */}
           {currentStep < sectionKeys.length ? (
-            <div
-              key={currentSectionKey}
-              className="rounded-xl overflow-hidden shadow-xl bg-white"
-            >
+            // Skill sections
+            <div key={currentSectionKey} className="rounded-xl overflow-hidden shadow-xl bg-white">
               <div
                 className={`w-full flex justify-between items-center px-6 py-5 bg-gradient-to-r ${currentColor} text-white font-semibold text-lg`}
               >
@@ -321,7 +302,6 @@ export default function EmployeeForm() {
                   {currentSection.title}
                 </div>
               </div>
-
               <div className="p-6 space-y-5 bg-white">
                 {currentSection.skills.map(skill => (
                   <div
@@ -334,12 +314,10 @@ export default function EmployeeForm() {
                 ))}
               </div>
             </div>
-          ) : (
-            // Additional Skills Section
+          ) : currentStep === sectionKeys.length ? (
+            // Additional Skills
             <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800 mb-4">
-                Additional Skills
-              </h2>
+              <h2 className="text-xl font-bold text-slate-800 mb-4">Additional Skills</h2>
               <textarea
                 rows={4}
                 placeholder="Tell us about other awesome things you can do..."
@@ -348,18 +326,89 @@ export default function EmployeeForm() {
                 className="w-full p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none resize-none"
               />
             </section>
+          ) : (
+            // Review & Submit (enhanced with star visuals)
+            <section className="bg-white rounded-2xl shadow-lg p-8 border border-slate-100">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <Eye className="w-6 h-6 text-indigo-500" /> Review Your Ratings
+              </h2>
+
+              <div className="space-y-6">
+                <div className="bg-slate-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-slate-700 mb-2">Personal Info</h3>
+                  <p><b>Name:</b> {formData.name}</p>
+                  <p><b>Employee ID:</b> {formData.employeeId}</p>
+                  <p><b>Email:</b> {formData.email}</p>
+                </div>
+
+                {sectionKeys.map(key => {
+                  const section = SKILL_SECTIONS[key];
+                  const ratedSkills = formData.skillRatings.filter(sr => sr.section === key);
+                  if (ratedSkills.length === 0) return null;
+                  return (
+                    <div key={key} className="border-t pt-4">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        {section.icon} {section.title}
+                      </h3>
+
+                      <ul className="mt-3 space-y-3">
+                        {ratedSkills.map(sr => (
+                          <li
+                            key={sr.skill}
+                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-50 p-3 rounded-lg shadow-sm"
+                          >
+                            <span className="font-medium text-slate-700">{sr.skill}</span>
+
+                            {/* Stars Display - read-only visual of 5 stars */}
+                            <div className="flex items-center gap-3 mt-2 sm:mt-0">
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <svg
+                                    key={star}
+                                    className={`w-5 h-5 ${
+                                      star <= sr.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200'
+                                    }`}
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                ))}
+                              </div>
+
+                              <span className="text-sm text-slate-600 font-medium">
+                                {RATING_LABELS[sr.rating as keyof typeof RATING_LABELS]}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+
+                {formData.additionalSkills && (
+                  <div className="border-t pt-4">
+                    <h3 className="font-bold text-slate-800">Additional Skills</h3>
+                    <p className="text-slate-700 whitespace-pre-line mt-1">
+                      {formData.additionalSkills}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
           )}
 
-          {/* Navigation Buttons */}
+          {/* Navigation */}
           <div className="flex justify-between items-center">
             <button
               type="button"
               onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
               disabled={currentStep === 0}
-              className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${currentStep === 0
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
-                }`}
+              className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${
+                currentStep === 0
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
+              }`}
             >
               Previous
             </button>
@@ -374,11 +423,12 @@ export default function EmployeeForm() {
               </button>
             ) : (
               <button
-                type="submit"
+                type="button"
                 disabled={loading}
+                onClick={handleSubmit}
                 className="px-8 py-3 bg-gradient-to-r from-sky-400 to-indigo-400 text-white font-bold text-lg rounded-2xl shadow-lg hover:from-sky-500 hover:to-indigo-500 transition-transform hover:scale-[1.02] disabled:opacity-60"
               >
-                {loading ? 'Submitting...' : 'Submit Assessment'}
+                {loading ? 'Submitting...' : 'Submit Form'}
               </button>
             )}
           </div>
@@ -387,7 +437,7 @@ export default function EmployeeForm() {
         {/* Toasts */}
         {status === 'success' && (
           <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce-in">
-            <CheckCircle /> <span>Assessment submitted successfully 🎉</span>
+            <CheckCircle /> <span>Form submitted successfully 🎉</span>
           </div>
         )}
         {status === 'error' && (
@@ -397,7 +447,6 @@ export default function EmployeeForm() {
         )}
       </div>
 
-      {/* Animations */}
       <style>{`
         @keyframes bounce-in {
           from { transform: translateY(40px); opacity: 0; }
