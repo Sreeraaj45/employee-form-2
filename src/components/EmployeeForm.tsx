@@ -138,24 +138,24 @@ export default function EmployeeForm() {
     formData.skillRatings.find(sr => sr.skill === skill && sr.section === section)?.rating || 0;
 
   const validateForm = () => {
-  if (!formData.name.trim()) return 'Name is required';
-  if (!formData.employeeId.trim()) return 'Employee ID is required';
-  if (!formData.email.trim()) return 'Email is required';
-  if (!formData.email.includes('@ielektron.com')) return 'Please use company email';
-  if (formData.skillRatings.length === 0) return 'Please rate at least one skill';
-  return null;
-};
+    if (!formData.name.trim()) return 'Name is required';
+    if (!formData.employeeId.trim()) return 'Employee ID is required';
+    if (!formData.email.trim()) return 'Email is required';
+    if (!formData.email.includes('@ielektron.com')) return 'Please use company email';
+    if (formData.skillRatings.length === 0) return 'Please rate at least one skill';
+    return null;
+  };
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-     const validationError = validateForm();
-  if (validationError) {
-    setStatus('error');
-    // You might want to show this error in UI
-    console.error(validationError);
-    return;
-  }
+    const validationError = validateForm();
+    if (validationError) {
+      setStatus('error');
+      // You might want to show this error in UI
+      console.error(validationError);
+      return;
+    }
     setLoading(true);
     setStatus(null);
     try {
@@ -263,9 +263,23 @@ export default function EmployeeForm() {
                 placeholder="Employee ID (Ex: IET - 1234)"
                 value={formData.employeeId}
                 required
-                onChange={e => setFormData({ ...formData, employeeId: e.target.value })}
+                onChange={e => {
+                  let value = e.target.value;
+
+                  // Ensure it always starts with "IET - "
+                  if (!value.startsWith("IET - ")) {
+                    value = "IET - " + value.replace(/^IET\s*-\s*/i, ""); // Remove other variants
+                  }
+
+                  // Prevent lowercase or space errors
+                  value = "IET - " + value.slice(6).replace(/[^0-9]/g, ""); // Allow only numbers after the prefix
+
+                  setFormData({ ...formData, employeeId: value });
+                }}
                 className="p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none"
+                maxLength={12}
               />
+
               <input
                 type="email"
                 placeholder="email.address@ielektron.com"
@@ -343,8 +357,8 @@ export default function EmployeeForm() {
               onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
               disabled={currentStep === 0}
               className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${currentStep === 0
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
                 }`}
             >
               Previous
