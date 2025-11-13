@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import confetti from 'canvas-confetti';
-import logo from './assets/logo.png';
+import logo from '../assets/logo.png';
 
 const SKILL_SECTIONS = {
   programming: {
