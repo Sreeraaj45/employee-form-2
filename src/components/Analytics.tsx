@@ -9,16 +9,26 @@ import {
   Title,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
-import { Loader, Maximize2, X } from "lucide-react";
+import {
+  Loader,
+  Maximize2,
+  X,
+  Users,
+  Code,
+  Star,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 import * as am4core from "@amcharts/amcharts4/core";
 import * as am4charts from "@amcharts/amcharts4/charts";
 import am4themes_animated from "@amcharts/amcharts4/themes/animated";
-import { api } from "../lib/api";
+import { api } from "../lib/api"; // Assuming the API utility exists
 
+// --- Chart Setup ---
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
 am4core.useTheme(am4themes_animated);
 
+// --- Interfaces and Constants ---
 interface EmployeeResponse {
   _id?: string;
   name: string;
@@ -42,10 +52,14 @@ const SKILL_SECTIONS = {
   programming: {
     title: "Programming Skills",
     skills: ["Python", "C++", "Java", "JavaScript", "C", "PySpark"],
+    icon: Code,
+    color: "text-indigo-600 bg-indigo-100",
   },
   dataAnalytics: {
     title: "Data Analytics",
     skills: ["Power BI / Tableau", "Visualization Libraries", "SQL", "NoSQL"],
+    icon: TrendingUp,
+    color: "text-green-600 bg-green-100",
   },
   dataScience: {
     title: "Data Science",
@@ -56,6 +70,8 @@ const SKILL_SECTIONS = {
       "NoSQL",
       "Dashboards (Power BI, Grafana)",
     ],
+    icon: Star,
+    color: "text-purple-600 bg-purple-100",
   },
   dataEngineering: {
     title: "Data Engineering",
@@ -70,39 +86,125 @@ const SKILL_SECTIONS = {
       "NoSQL",
       "flyte",
     ],
+    icon: Zap,
+    color: "text-red-600 bg-red-100",
   },
   aiDL: {
     title: "AI / Deep Learning",
     skills: ["TensorFlow", "PyTorch", "OpenCV", "Computer Vision Models", "Generative AI (GenAI)"],
+    icon: Code,
+    color: "text-pink-600 bg-pink-100",
   },
   frontend: {
     title: "Frontend Development",
     skills: ["HTML", "CSS", "Bootstrap", "React", "Angular", "Tailwind CSS", "Vue.js", "TypeScript"],
+    icon: Code,
+    color: "text-blue-600 bg-blue-100",
   },
   backend: {
     title: "Backend Development",
     skills: ["Django", "Flask", "FastAPI", "Spring Boot", "ASP.NET", "Express.js"],
+    icon: Code,
+    color: "text-yellow-600 bg-yellow-100",
   },
   devops: {
     title: "DevOps",
     skills: ["Jenkins", "CI/CD", "Kubernetes", "Docker"],
+    icon: Code,
+    color: "text-teal-600 bg-teal-100",
   },
 };
 
+const PIE_COLORS = [
+    am4core.color("#6366f1"), // Indigo 500
+    am4core.color("#10b981"), // Emerald 500
+    am4core.color("#f97316"), // Orange 500
+    am4core.color("#ef4444"), // Red 500
+    am4core.color("#06b6d4"), // Cyan 500
+    am4core.color("#facc15"), // Yellow 400
+    am4core.color("#a855f7"), // Violet 500
+];
+
+// --- Analytics Component ---
 export default function Analytics() {
   const [responses, setResponses] = useState<EmployeeResponse[]>([]);
-  const [skillAnalytics, setSkillAnalytics] = useState<Array<{ skill: string; count: number; avgRating: number }>>([]);
+  const [skillAnalytics, setSkillAnalytics] = useState<
+    Array<{ skill: string; count: number; avgRating: number }>
+  >([]);
   const [loading, setLoading] = useState(true);
 
   const chartRef = useRef<HTMLDivElement | null>(null);
   const modalChartRef = useRef<HTMLDivElement | null>(null);
-  // hold created amCharts instances so we can dispose correctly
   const pieChartInstance = useRef<any>(null);
   const modalPieChartInstance = useRef<any>(null);
 
   const [isPieModalOpen, setIsPieModalOpen] = useState(false);
   const [isBarModalOpen, setIsBarModalOpen] = useState(false);
 
+  // --- Data Loading and Analysis ---
+  const loadAnalytics = async () => {
+    setLoading(true);
+    try {
+      // NOTE: This assumes `api.getResponses()` returns a promise that resolves to the data
+      const data = await api.getResponses();
+      setResponses(Array.isArray(data) ? data : []);
+      analyzeSkills(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error loading analytics:", err);
+      setResponses([]);
+      setSkillAnalytics([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeSkills = (responseData: EmployeeResponse[]) => {
+    const skillMap = new Map<
+      string,
+      { count: number; totalRating: number; ratingCount: number }
+    >();
+
+    responseData.forEach((response) => {
+      const seen = new Set<string>();
+      (response.selected_skills || []).forEach((skill) => {
+        if (!skillMap.has(skill))
+          skillMap.set(skill, { count: 0, totalRating: 0, ratingCount: 0 });
+        const d = skillMap.get(skill)!;
+        d.count++;
+        seen.add(skill);
+        const rating = (response.skill_ratings || []).find(
+          (sr) => sr.skill === skill
+        );
+        if (rating) {
+          d.totalRating += rating.rating;
+          d.ratingCount++;
+        }
+      });
+
+      (response.skill_ratings || []).forEach((sr) => {
+        if (seen.has(sr.skill)) return;
+        if (!skillMap.has(sr.skill))
+          skillMap.set(sr.skill, { count: 0, totalRating: 0, ratingCount: 0 });
+        const d = skillMap.get(sr.skill)!;
+        d.count++;
+        d.totalRating += sr.rating;
+        d.ratingCount++;
+      });
+    });
+
+    const analytics = Array.from(skillMap.entries()).map(([skill, data]) => ({
+      skill,
+      count: data.count,
+      avgRating:
+        data.ratingCount > 0
+          ? Number((data.totalRating / data.ratingCount).toFixed(1))
+          : 0,
+    }));
+
+    setSkillAnalytics(analytics.sort((a, b) => b.count - a.count));
+  };
+
+  // --- Effects for Data Loading and Chart Management ---
   useEffect(() => {
     loadAnalytics();
     // cleanup on unmount
@@ -142,66 +244,29 @@ export default function Analytics() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPieModalOpen]);
 
-  const loadAnalytics = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getResponses();
-      setResponses(Array.isArray(data) ? data : []);
-      analyzeSkills(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Error loading analytics:", err);
-      setResponses([]);
-      setSkillAnalytics([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const analyzeSkills = (responseData: EmployeeResponse[]) => {
-    const skillMap = new Map<string, { count: number; totalRating: number; ratingCount: number }>();
-
-    responseData.forEach((response) => {
-      // prefer skill_ratings if present; also count selected_skills as presence
-      const seen = new Set<string>();
-      (response.selected_skills || []).forEach((skill) => {
-        if (!skillMap.has(skill)) skillMap.set(skill, { count: 0, totalRating: 0, ratingCount: 0 });
-        const d = skillMap.get(skill)!;
-        d.count++;
-        seen.add(skill);
-        const rating = (response.skill_ratings || []).find((sr) => sr.skill === skill);
-        if (rating) {
-          d.totalRating += rating.rating;
-          d.ratingCount++;
-        }
-      });
-
-      // If someone provided ratings for skills not in selected_skills, also include them
-      (response.skill_ratings || []).forEach((sr) => {
-        if (seen.has(sr.skill)) return;
-        if (!skillMap.has(sr.skill)) skillMap.set(sr.skill, { count: 0, totalRating: 0, ratingCount: 0 });
-        const d = skillMap.get(sr.skill)!;
-        d.count++;
-        d.totalRating += sr.rating;
-        d.ratingCount++;
-      });
-    });
-
-    const analytics = Array.from(skillMap.entries()).map(([skill, data]) => ({
-      skill,
-      count: data.count,
-      avgRating: data.ratingCount > 0 ? Number((data.totalRating / data.ratingCount).toFixed(1)) : 0,
-    }));
-
-    setSkillAnalytics(analytics.sort((a, b) => b.count - a.count));
-  };
-
+  // --- Data Preparation ---
   const top5Skills = skillAnalytics.slice(0, 5);
   const top10Skills = skillAnalytics.slice(0, 10);
 
   const avgRating =
-    skillAnalytics.length > 0 ? (skillAnalytics.reduce((sum, s) => sum + s.avgRating, 0) / skillAnalytics.length).toFixed(1) : "0";
+    skillAnalytics.length > 0
+      ? (
+          skillAnalytics.reduce((sum, s) => sum + s.avgRating, 0) /
+          skillAnalytics.length
+        ).toFixed(1)
+      : "0";
 
-  // Chart.js Bar Chart: Top 5 skills (small)
+  const skillsBySection = Object.entries(SKILL_SECTIONS).map(([key, section]: any) => {
+    const skillSet = new Set(section.skills);
+    const count = skillAnalytics.reduce(
+      (acc, s) => (skillSet.has(s.skill) ? acc + s.count : acc),
+      0
+    );
+    const distinct = skillAnalytics.filter((s) => skillSet.has(s.skill)).length;
+    return { key, title: section.title, count, distinctSkills: distinct, icon: section.icon, color: section.color };
+  });
+
+  // --- Chart.js Data and Options ---
   const barChartData = {
     labels: top5Skills.map((s) => s.skill),
     datasets: [
@@ -211,13 +276,13 @@ export default function Analytics() {
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, "rgba(59,130,246,0.9)");
-          gradient.addColorStop(1, "rgba(29,78,216,0.7)");
+          gradient.addColorStop(0, "rgba(79, 70, 229, 0.9)"); // Indigo 600
+          gradient.addColorStop(1, "rgba(55, 48, 163, 0.7)"); // Indigo 800
           return gradient;
         },
-        borderColor: "rgba(37,99,235,1)",
+        borderColor: "rgba(79, 70, 229, 1)",
         borderWidth: 1,
-        borderRadius: 6,
+        borderRadius: 8,
       },
     ],
   };
@@ -225,59 +290,10 @@ export default function Analytics() {
   const barChartOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        display: false, // <= removed legend
-      },
+      legend: { display: false },
       title: {
         display: true,
         text: "Top 5 Most Common Skills",
-        color: "#111827",
-        font: { size: 16, weight: "bold" as const },
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: "#4B5563" },
-      },
-      y: {
-        beginAtZero: true,
-        grid: { color: "rgba(229,231,235,0.4)" },
-        ticks: { color: "#4B5563" },
-      },
-    },
-  };
-
-  // Modal bar (Top 10)
-  const barModalData = {
-    labels: top10Skills.map((s) => s.skill),
-    datasets: [
-      {
-        label: "Employees per Skill",
-        data: top10Skills.map((s) => s.count),
-        backgroundColor: (context: any) => {
-          const ctx = context.chart.ctx;
-          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(59,130,246,0.9)");
-          gradient.addColorStop(1, "rgba(29,78,216,0.7)");
-          return gradient;
-        },
-        borderColor: "rgba(37,99,235,1)",
-        borderWidth: 1,
-        borderRadius: 6,
-      },
-    ],
-  };
-
-  const barModalOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      title: {
-        display: true,
-        text: "Top 10 Most Common Skills",
         color: "#111827",
         font: { size: 18, weight: "bold" as const },
       },
@@ -295,17 +311,55 @@ export default function Analytics() {
     },
   };
 
-  // Skills by section counts (aggregate counts from skillAnalytics)
-  const skillsBySection = Object.entries(SKILL_SECTIONS).map(([key, section]: any) => {
-    const skillSet = new Set(section.skills);
-    const count = skillAnalytics.reduce((acc, s) => (skillSet.has(s.skill) ? acc + s.count : acc), 0);
-    const distinct = skillAnalytics.filter((s) => skillSet.has(s.skill)).length;
-    return { key, title: section.title, count, distinctSkills: distinct };
-  });
+  const barModalData = {
+    labels: top10Skills.map((s) => s.skill),
+    datasets: [
+      {
+        label: "Employees per Skill",
+        data: top10Skills.map((s) => s.count),
+        backgroundColor: (context: any) => {
+          const ctx = context.chart.ctx;
+          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, "rgba(79, 70, 229, 0.9)");
+          gradient.addColorStop(1, "rgba(55, 48, 163, 0.7)");
+          return gradient;
+        },
+        borderColor: "rgba(79, 70, 229, 1)",
+        borderWidth: 1,
+        borderRadius: 8,
+      },
+    ],
+  };
 
-  // ----- amCharts helpers -----
-  const createPieChartOn = (div: HTMLDivElement | null, targetRef: React.MutableRefObject<any>) => {
-    // Dispose previous if exists
+  const barModalOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: "Top 10 Most Common Skills",
+        color: "#111827",
+        font: { size: 20, weight: "bold" as const },
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: "#4B5563" },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: "rgba(229,231,235,0.4)" },
+        ticks: { color: "#4B5563" },
+      },
+    },
+  };
+
+  // --- amCharts Helpers (3D Pie Chart) ---
+  const createPieChartOn = (
+    div: HTMLDivElement | null,
+    targetRef: React.MutableRefObject<any>
+  ) => {
     if (!div) return null;
     if (targetRef.current) {
       try {
@@ -317,58 +371,59 @@ export default function Analytics() {
     }
 
     const chart = am4core.create(div, am4charts.PieChart3D);
-    // remove amCharts watermark/logo
     try {
-      // disable the logo
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       chart.logo && (chart.logo.disabled = true);
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
 
     chart.hiddenState.properties.opacity = 0;
-    // chart.legend = undefined;
-    chart.data = skillAnalytics.map((s) => ({ category: s.skill, value: s.count }));
+    // Limit data to top 15 for readability in small chart
+    const dataForPie = skillAnalytics
+      .map((s) => ({ category: s.skill, value: s.count }))
+      .slice(0, 15);
+    chart.data = dataForPie;
+
     const series = chart.series.push(new am4charts.PieSeries3D());
     series.dataFields.value = "value";
     series.dataFields.category = "category";
     series.labels.template.text = "{category}: {value.percent.formatNumber('#.0')}%";
-    series.labels.template.fill = am4core.color("#333");
-    series.labels.template.fontSize = 14;
+    series.labels.template.fill = am4core.color("#4B5563"); // Gray 600
+    series.labels.template.fontSize = 10;
+    series.labels.template.fontWeight = "600";
     series.ticks.template.disabled = false;
-    series.ticks.template.strokeOpacity = 0.3;
+    series.ticks.template.strokeOpacity = 0.5;
     series.labels.template.wrap = true;
-    series.labels.template.maxWidth = 180;
+    series.labels.template.maxWidth = 150;
     series.labels.template.truncate = false;
+
+    // Changed to your pastel color palette
     series.colors.list = [
-      am4core.color("#A7C7E7"),
-      am4core.color("#F7CAC9"),
-      am4core.color("#C3E8BD"),
-      am4core.color("#FBE5A1"),
-      am4core.color("#E6C9F7"),
-      am4core.color("#FFD6A5"),
-      am4core.color("#B5EAD7"),
+      am4core.color("#A7C7E7"), // Light blue
+      am4core.color("#F7CAC9"), // Light pink
+      am4core.color("#C3E8BD"), // Light green
+      am4core.color("#FBE5A1"), // Light yellow
+      am4core.color("#E6C9F7"), // Light purple
+      am4core.color("#FFD6A5"), // Light orange
+      am4core.color("#B5EAD7"), // Light mint
     ];
-    chart.innerRadius = am4core.percent(25);
-    chart.depth = 25;
-    chart.radius = am4core.percent(65);
+    
+    chart.innerRadius = am4core.percent(30);
+    chart.depth = 35;
+    chart.radius = am4core.percent(70);
     chart.padding(16, 16, 16, 16);
     chart.align = "center";
-    series.slices.template.tooltipText = "{category}: {value} employees ({value.percent.formatNumber('#.0')}%)";
+    series.slices.template.tooltipText =
+      "{category}: {value} employees ({value.percent.formatNumber('#.0')}%)";
     targetRef.current = chart;
     return chart;
   };
 
   const createSmallPieChart = () => {
     if (!chartRef.current) return;
-    // dispose existing
     if (pieChartInstance.current) {
       try {
         pieChartInstance.current.dispose();
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
       pieChartInstance.current = null;
     }
     pieChartInstance.current = createPieChartOn(chartRef.current, pieChartInstance);
@@ -382,205 +437,265 @@ export default function Analytics() {
       } catch (e) {}
       modalPieChartInstance.current = null;
     }
-    modalPieChartInstance.current = createPieChartOn(modalChartRef.current, modalPieChartInstance);
-    // enlarge for modal
+    modalPieChartInstance.current = createPieChartOn(
+      modalChartRef.current,
+      modalPieChartInstance
+    );
+    // Adjust modal chart appearance
     if (modalPieChartInstance.current) {
       modalPieChartInstance.current.radius = am4core.percent(85);
-      modalPieChartInstance.current.innerRadius = am4core.percent(30);
+      modalPieChartInstance.current.innerRadius = am4core.percent(40);
+      modalPieChartInstance.current.depth = 45;
     }
   };
 
+  // --- Render Loading State ---
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-lg p-12 flex items-center justify-center gap-3">
-          <Loader size={24} className="animate-spin text-blue-600" />
-          <span className="text-gray-600">Loading analytics...</span>
+        <div className="bg-white rounded-xl shadow-2xl p-16 flex flex-col items-center justify-center gap-4 border border-gray-100">
+          <Loader size={32} className="animate-spin text-indigo-600" />
+          <span className="text-xl font-medium text-gray-700">Loading comprehensive analytics...</span>
         </div>
       </div>
     );
   }
 
+  // --- Main Dashboard Render ---
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2 md:p-6 bg-gray-50 min-h-screen">
+      
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-lg p-6 border border-blue-200">
-          <div className="text-sm font-medium text-blue-600">Total Submissions</div>
-          <div className="text-4xl font-bold text-blue-900 mt-2">{responses.length}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Total Submissions */}
+        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 transition transform hover:scale-[1.01] duration-300">
+          <div className="flex items-center justify-between">
+            <Users className="w-8 h-8 text-indigo-500" />
+            <div className="text-sm font-medium text-gray-600 uppercase tracking-wider">
+              Total Submissions
+            </div>
+          </div>
+          <div className="text-5xl font-extrabold text-indigo-700 mt-3">{responses.length}</div>
+          <p className="text-xs text-gray-400 mt-1">Total responses collected</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-lg p-6 border border-green-200">
-          <div className="text-sm font-medium text-green-600">Unique Skills</div>
-          <div className="text-4xl font-bold text-green-900 mt-2">{skillAnalytics.length}</div>
+        {/* Unique Skills */}
+        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 transition transform hover:scale-[1.01] duration-300">
+          <div className="flex items-center justify-between">
+            <Code className="w-8 h-8 text-green-500" />
+            <div className="text-sm font-medium text-gray-600 uppercase tracking-wider">
+              Unique Skills
+            </div>
+          </div>
+          <div className="text-5xl font-extrabold text-green-700 mt-3">
+            {skillAnalytics.length}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">Distinct skills rated/selected</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-lg p-6 border border-purple-200">
-          <div className="text-sm font-medium text-purple-600">Avg Rating</div>
-          <div className="text-4xl font-bold text-purple-900 mt-2">{avgRating}★</div>
+        {/* Avg Rating */}
+        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 transition transform hover:scale-[1.01] duration-300">
+          <div className="flex items-center justify-between">
+            <Star className="w-8 h-8 text-yellow-500" />
+            <div className="text-sm font-medium text-gray-600 uppercase tracking-wider">
+              Overall Avg Rating
+            </div>
+          </div>
+          <div className="text-5xl font-extrabold text-yellow-700 mt-3 flex items-baseline">
+            {avgRating}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">Average proficiency across all skills</p>
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-lg p-6 relative flex flex-col">
-          <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Top Skills (Top 5)</h3>
+      {/* --- Charts Section --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Bar Chart (Top 5) */}
+        <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6 relative flex flex-col">
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="text-2xl font-bold text-gray-800">Top 5 Employee Skills</h3>
             <button
               onClick={() => setIsBarModalOpen(true)}
               title="Open bar chart fullscreen (Top 10)"
-              className="p-2 rounded hover:bg-gray-100"
+              className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
             >
-              <Maximize2 size={18} />
+              <Maximize2 size={20} />
             </button>
           </div>
-          <div>
+          <p className="text-sm text-gray-500 mb-4">Count of employees mentioning the skill.</p>
+          <div className="min-h-[350px]">
             <Bar data={barChartData} options={barChartOptions} />
           </div>
         </div>
 
-        {/* 3D Pie Chart (small) with fullscreen button */}
-        <div className="bg-white rounded-lg shadow-lg p-4 relative flex flex-col">
-          <div className="flex items-start justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">Skills Distribution</h3>
+        {/* 3D Pie Chart (small) */}
+        <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6 relative flex flex-col">
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="text-2xl font-bold text-gray-800">Skill Distribution</h3>
             <button
               onClick={() => setIsPieModalOpen(true)}
               title="Open pie chart fullscreen"
-              className="p-2 rounded hover:bg-gray-100"
+              className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
             >
-              <Maximize2 size={18} />
+              <Maximize2 size={20} />
             </button>
           </div>
-
-          <div className="mt-3 flex-1 min-h-[360px]">
-            <div ref={chartRef} id="chartdiv" style={{ width: "100%", height: "100%" }} />
+          <p className="text-sm text-gray-500 mb-4">Percentage breakdown of all recorded skills (Top 15).</p>
+          <div className="mt-3 flex-1 min-h-[350px]">
+            <div
+              ref={chartRef}
+              id="chartdiv"
+              style={{ width: "100%", height: "100%", minHeight: "350px" }}
+            />
           </div>
         </div>
       </div>
 
-      {/* Skills by Section */}
-      <div className="grid grid-cols-1 gap-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Skills by Section</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {skillsBySection.map((s) => (
-              <div key={s.key} className="p-4 rounded-lg border bg-gray-50">
-                <div className="text-sm text-gray-600">{s.title}</div>
-                <div className="text-2xl font-bold text-gray-800 mt-2">{s.count}</div>
-                <div className="text-sm text-gray-500 mt-1">{s.distinctSkills} distinct skills</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Ratings & Top Skills Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Top Skills</h3>
-          <div className="space-y-4">
-            {top5Skills.length > 0 ? (
-              top5Skills.map((skill, index) => (
-                <div key={index}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-gray-700">{skill.skill}</span>
-                    <span className="text-sm text-gray-600">{skill.count} employees</span>
+      {/* --- Skills by Section & Ratings/Top Skills --- */}
+      <div className="space-y-8">
+        {/* Skills by Section Grid */}
+        <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">Skills by Domain</h3>
+          {/* Changed lg:grid-cols-8 to lg:grid-cols-4 for two rows */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {skillsBySection.map((s) => {
+              const Icon = s.icon;
+              return (
+                <div key={s.key} className={`p-4 rounded-xl border border-gray-100 shadow-md ${s.color}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon size={20} />
+                    <div className="text-sm font-semibold whitespace-nowrap">{s.title}</div>
                   </div>
-                  <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-blue-500 h-full transition-all duration-500"
-                      style={{
-                        width: `${(skill.count / Math.max(...skillAnalytics.map((s) => s.count), 1)) * 100}%`,
-                      }}
-                    />
-                  </div>
+                  <div className="text-3xl font-extrabold text-gray-800">{s.count}</div>
+                  <div className="text-xs text-gray-600 mt-1">{s.distinctSkills} distinct</div>
                 </div>
-              ))
-            ) : (
-              <p className="text-gray-500">No skills data yet</p>
-            )}
+              );
+            })}
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Skill Ratings</h3>
-          <div className="space-y-4 max-h-[420px] overflow-auto">
-            {skillAnalytics.length > 0 ? (
-              skillAnalytics.map((skill, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700 flex-1">{skill.skill}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`text-lg ${i < Math.round(skill.avgRating) ? "text-yellow-400" : "text-gray-300"}`}>
-                          ★
-                        </span>
-                      ))}
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Top Skills List (Progress Bars) */}
+          <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">Top Skill Momentum (Top 5)</h3>
+            <div className="space-y-6">
+              {top5Skills.length > 0 ? (
+                top5Skills.map((skill, index) => (
+                  <div key={index}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-lg font-semibold text-gray-800">{skill.skill}</span>
+                      <span className="text-base font-medium text-indigo-600">
+                        {skill.count} employees
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-700 w-8 text-right">{skill.avgRating}</span>
+                    <div className="bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className="bg-indigo-500 h-full transition-all duration-700 ease-out"
+                        style={{
+                          width: `${
+                            (skill.count /
+                              Math.max(...skillAnalytics.map((s) => s.count), 1)) *
+                            100
+                          }%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">No ratings data yet</p>
-            )}
+                ))
+              ) : (
+                <p className="text-gray-500 italic">No skills data available for visualization.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Skill Ratings List (Stars) */}
+          <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">Skill Proficiency Overview</h3>
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
+              {skillAnalytics.length > 0 ? (
+                skillAnalytics.map((skill, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition duration-150"
+                  >
+                    <span className="text-base text-gray-700 flex-1 font-medium">
+                      {skill.skill}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            size={18}
+                            fill={i < Math.round(skill.avgRating) ? "#FBBF24" : "none"} // Yellow 400
+                            stroke={i < Math.round(skill.avgRating) ? "#FBBF24" : "#D1D5DB"} // Gray 300
+                            className="transition duration-100"
+                          />
+                        ))}
+                      </div>
+                      <span className="text-base font-bold text-indigo-700 w-8 text-right">
+                        {skill.avgRating}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">No ratings data available for overview.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Fullscreen Modal for Pie Chart */}
       {isPieModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] overflow-hidden relative">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Skills Distribution</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setIsPieModalOpen(false);
-                  }}
-                  title="Close"
-                  className="p-2 rounded hover:bg-gray-100"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm transition-opacity duration-300">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[95vh] relative transform scale-100 transition-transform duration-300">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/50">
+              <h3 className="text-xl font-bold text-gray-800">Full Skills Distribution (Top 15)</h3>
+              <button
+                onClick={() => setIsPieModalOpen(false)}
+                title="Close"
+                className="p-2 rounded-full text-gray-600 hover:bg-gray-200 transition"
+              >
+                <X size={24} />
+              </button>
             </div>
-
-            <div className="p-4 h-full">
-              <div ref={modalChartRef} style={{ width: "95%", height: "95%" }} />
+            <div className="p-4 h-[calc(100vh-120px)] flex items-center justify-center">
+              <div ref={modalChartRef} style={{ width: "100%", height: "100%" }} />
             </div>
           </div>
         </div>
       )}
 
       {/* Fullscreen Modal for Bar Chart (Top 10) */}
-      {isBarModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl h-[90vh] overflow-hidden relative">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">Top 10 Skills</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setIsBarModalOpen(false);
-                  }}
-                  title="Close"
-                  className="p-2 rounded hover:bg-gray-100"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
+{isBarModalOpen && (
+  <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-0 backdrop-blur-sm transition-opacity duration-300">
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl h-screen relative transform scale-100 transition-transform duration-300 mt-4">
+      
+      {/* Modal Header */}
+      <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/50 rounded-t-xl">
+        <h3 className="text-xl font-bold text-gray-800">
+          Top 10 Most Common Skills
+        </h3>
+        <button
+          onClick={() => setIsBarModalOpen(false)}
+          title="Close"
+          className="p-2 rounded-full text-gray-600 hover:bg-gray-200 transition"
+        >
+          <X size={24} />
+        </button>
+      </div>
 
-            <div className="p-4 h-full">
-              <div style={{ width: "90%", height: "100%" }}>
-                <Bar data={barModalData} options={barModalOptions} />
-              </div>
-            </div>
-          </div>
+      {/* Chart Content */}
+      <div className="p-8 h-[calc(100vh-120px)] flex items-center justify-center">
+        <div className="w-full h-full">
+          <Bar data={barModalData} options={barModalOptions} />
         </div>
-      )}
+      </div>
     </div>
-  );
+  </div>
+)}
+</div>
+);
 }

@@ -44,10 +44,10 @@ export default function DashboardLayout({
         </header> */}
 
         <main className="flex-1 overflow-auto">
-          <div className="px-6 py-6">
+          <div className="px-1 py-1">
             {activeTab === 'builder' && <FormBuilder />}
-            {activeTab === 'responses' && <Responses />}
             {activeTab === 'analytics' && <Analytics />}
+            {activeTab === 'responses' && <Responses />}
           </div>
         </main>
       </div>

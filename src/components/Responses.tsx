@@ -563,10 +563,10 @@ export default function Responses() {
 
   // --- Render Table ---
   return (
-    <div className="space-y-2 p-2 bg-slate-50">
+    <div className="space-y-4 p-2 bg-slate-50">
   
   {/* Header + controls */}
-  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white rounded-xl shadow-md border border-slate-100">
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white rounded-l shadow-md border border-slate-100">
     <div className="flex items-center gap-4">
       <h2 className="text-xl font-bold text-gray-800">
         Total Responses: <span className="text-indigo-600">{responses.length}</span>
@@ -714,8 +714,8 @@ export default function Responses() {
   </div>
 
       {/* Table Container - Smooth Scrolling */}
-      <div className="bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-200 max-h-[100vh] relative">
-        <div className="overflow-auto max-h-[75vh]">
+      <div className="bg-white rounded-l shadow-2xl overflow-hidden border border-gray-200 max-h-[150vh] relative">
+        <div className="overflow-auto max-h-[78vh]">
           <table className="min-w-full border-collapse text-sm">
             <thead>
               {/* Header Row 1: Main Headers (Personal Info, Skill Sections, Other) - STICKY TOP */}
