@@ -162,7 +162,7 @@ export default function Responses() {
     const initialSubOrder: Record<string, string[]> = {};
 
     initialHeaderOrder.forEach(key => {
-        initialVisible[key] = true;
+      initialVisible[key] = true;
     });
 
     Object.entries(SKILL_SECTIONS).forEach(([sectionKey, section]) => {
@@ -177,7 +177,7 @@ export default function Responses() {
     setHeaderOrder(initialHeaderOrder);
     loadResponses();
   }, [initialHeaderOrder]);
-  
+
   // Close columns dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -253,15 +253,15 @@ export default function Responses() {
 
   const handleRatingChange = (skill: string, newRating: number) => {
     if (!editData.skill_ratings) return;
-    
+
     const existingRatingIndex = editData.skill_ratings.findIndex((r) => r.skill === skill);
-    
+
     const updatedRatings = existingRatingIndex !== -1
       ? editData.skill_ratings.map((r, index) =>
-          index === existingRatingIndex ? { ...r, rating: newRating } : r
-        )
+        index === existingRatingIndex ? { ...r, rating: newRating } : r
+      )
       : [...editData.skill_ratings, { skill, rating: newRating }];
-      
+
     setEditData({ ...editData, skill_ratings: updatedRatings });
   };
 
@@ -295,7 +295,7 @@ export default function Responses() {
       const next = { ...prev };
       const newVal = !prev[key];
       next[key] = newVal;
-      
+
       if (key.startsWith('section_')) {
         const sectionKey = key.replace('section_', '');
         (SKILL_SECTIONS as any)[sectionKey].skills.forEach((s: string) => (next[s] = newVal));
@@ -310,11 +310,11 @@ export default function Responses() {
           next[key] = newVal;
           const allOn = skills.every(s => !next[s] || next[s]);
           const allOff = skills.every(s => !next[s] || !next[s]);
-          
-          if(newVal) {
-             next[`section_${sectionKey}`] = true;
+
+          if (newVal) {
+            next[`section_${sectionKey}`] = true;
           } else if (allOff) {
-             next[`section_${sectionKey}`] = false;
+            next[`section_${sectionKey}`] = false;
           }
         }
       }
@@ -326,7 +326,7 @@ export default function Responses() {
     const skills = subOrder[sectionKey] || [];
     return skills.filter(s => visibleColumns[s]).length;
   };
-  
+
   const getSkillRating = (response: EmployeeResponse | Partial<EmployeeResponse>, skill: string) => {
     const ratings = response._id === editingId ? editData.skill_ratings : response.skill_ratings;
     return ratings?.find(sr => sr.skill === skill)?.rating || 0;
@@ -380,7 +380,7 @@ export default function Responses() {
     e.preventDefault();
     const dragged = dragSubSkill.current;
     if (!dragged || dragged.section !== sectionKey || dragged.skill === targetSkill) return;
-    
+
     setSubOrder(prev => {
       const arr = [...(prev[sectionKey] || [])];
       const from = arr.indexOf(dragged.skill);
@@ -393,30 +393,28 @@ export default function Responses() {
     dragSubSkill.current = null;
   };
 
-  // --- Excel Export (Logic remains robust) ---
+  // --- Excel Export (patched) ---
   const downloadExcel = () => {
-    // ... (Your robust Excel logic is preserved here) ...
     // Build visible keys in order based on headerOrder & subOrder
     const visibleKeysOrdered: string[] = [];
     headerOrder.forEach(h => {
-        if (h.startsWith('section_')) {
-            const sectionKey = h.replace('section_', '');
-            const skills = subOrder[sectionKey] || [];
-            skills.forEach(skill => {
-                if (visibleColumns[skill]) visibleKeysOrdered.push(skill);
-            });
-        } else {
-            // plain column
-            if (visibleColumns[h]) visibleKeysOrdered.push(h);
-        }
+      if (h.startsWith('section_')) {
+        const sectionKey = h.replace('section_', '');
+        const skills = subOrder[sectionKey] || [];
+        skills.forEach(skill => {
+          if (visibleColumns[skill]) visibleKeysOrdered.push(skill);
+        });
+      } else {
+        if (visibleColumns[h]) visibleKeysOrdered.push(h);
+      }
     });
 
     // Exclude timestamp & actions from export
     const exportKeys = visibleKeysOrdered.filter(k => k !== 'timestamp' && k !== 'actions');
 
     if (exportKeys.length === 0) {
-        alert('No columns selected to export.');
-        return;
+      alert('No columns selected to export.');
+      return;
     }
 
     // Build two header rows: main headers (merged over their subcolumns) and subheaders
@@ -426,58 +424,76 @@ export default function Responses() {
 
     let colIndex = 0;
     headerOrder.forEach(h => {
-        if (h.startsWith('section_')) {
-            const sectionKey = h.replace('section_', '');
-            const skills = subOrder[sectionKey] || [];
-            const visibleSkills = skills.filter(s => exportKeys.includes(s));
-            const span = visibleSkills.length;
-            if (span === 0) return;
+      if (h.startsWith('section_')) {
+        const sectionKey = h.replace('section_', '');
+        const skills = subOrder[sectionKey] || [];
+        const visibleSkills = skills.filter(s => exportKeys.includes(s));
+        const span = visibleSkills.length;
+        if (span === 0) return;
 
-            headerRow1.push(SKILL_SECTIONS[sectionKey].title);
-            if (span > 1) {
-                merges.push({ s: { r: 0, c: colIndex }, e: { r: 0, c: colIndex + span - 1 } });
-            }
-            visibleSkills.forEach(skill => {
-                headerRow2.push(skill);
-            });
-            colIndex += span;
-        } else {
-            if (!exportKeys.includes(h)) return;
-            const friendly =
-                h === 'number'
-                    ? 'No.'
-                    : h === 'employee_id'
-                    ? 'Emp ID'
-                    : h === 'additional_skills'
-                    ? 'Additional Skills'
-                    : h === 'name'
-                    ? 'Name'
-                    : h === 'email'
+        // Add the section title once...
+        headerRow1.push(SKILL_SECTIONS[sectionKey].title);
+
+        // --- IMPORTANT: add placeholders so headerRow1 length matches number of subcolumns ---
+        // For a section spanning multiple subcolumns, we must push empty strings
+        // after the title so headerRow1 array length equals headerRow2 length.
+        for (let i = 1; i < span; ++i) {
+          headerRow1.push('');
+        }
+
+        // If multiple subcolumns, merge the title across them in the first row
+        if (span > 1) {
+          merges.push({ s: { r: 0, c: colIndex }, e: { r: 0, c: colIndex + span - 1 } });
+        }
+
+        // Add each visible skill in the second header row
+        visibleSkills.forEach(skill => {
+          headerRow2.push(skill);
+        });
+
+        // Advance column index by how many visible skills were added
+        colIndex += span;
+      } else {
+        if (!exportKeys.includes(h)) return;
+        const friendly =
+          h === 'number'
+            ? 'No.'
+            : h === 'employee_id'
+              ? 'Emp ID'
+              : h === 'additional_skills'
+                ? 'Additional Skills'
+                : h === 'name'
+                  ? 'Name'
+                  : h === 'email'
                     ? 'Email'
                     : h;
-            headerRow1.push(friendly);
-            headerRow2.push('');
-            colIndex += 1;
-        }
+
+        // Single columns: title in row1, placeholder in row2 and vertical merge (row1->row2)
+        headerRow1.push(friendly);
+        headerRow2.push('');
+        merges.push({ s: { r: 0, c: colIndex }, e: { r: 1, c: colIndex } });
+
+        colIndex += 1;
+      }
     });
 
     // Build data rows
-    const dataRows = filteredResponses.map((r, idx) => {
-        return exportKeys.map(k => {
-            if (k === 'number') return idx + 1;
-            if (k === 'name') return r.name;
-            if (k === 'employee_id') return r.employee_id;
-            if (k === 'email') return r.email;
-            if (k === 'additional_skills') return r.additional_skills || '';
+    const dataRows = filteredResponses.map((r, idx) =>
+      exportKeys.map(k => {
+        if (k === 'number') return idx + 1;
+        if (k === 'name') return r.name;
+        if (k === 'employee_id') return r.employee_id;
+        if (k === 'email') return r.email;
+        if (k === 'additional_skills') return r.additional_skills || '';
 
-            const ratingObj = r.skill_ratings.find(sr => sr.skill === k);
-            if (ratingObj) {
-                const label = RATING_LABELS[ratingObj.rating] || '';
-                return `${label} (${ratingObj.rating})`;
-            }
-            return '';
-        });
-    });
+        const ratingObj = r.skill_ratings.find(sr => sr.skill === k);
+        if (ratingObj) {
+          const label = RATING_LABELS[ratingObj.rating] || '';
+          return `${label} (${ratingObj.rating})`;
+        }
+        return '';
+      })
+    );
 
     // Use AOA with two header rows
     const aoa = [headerRow1, headerRow2, ...dataRows];
@@ -486,36 +502,36 @@ export default function Responses() {
     // Attach merges
     if (!ws['!merges']) ws['!merges'] = [];
     (ws['!merges'] as any[]).push(...merges);
-    
-    // Styling (simplified for brevity, assuming external library handling if needed)
-    // Add default styles for all cells
-    const range = XLSX.utils.decode_range(ws['!ref'] || '');
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-        // Header row 1 cell style
+
+    // Optional styling: try apply but don't fail if not supported
+    try {
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddr1 = XLSX.utils.encode_cell({ r: 0, c: C });
         const cell1 = ws[cellAddr1];
         if (cell1) cell1.s = { font: { bold: true, color: { rgb: 'FFFFFFFF' } }, fill: { fgColor: { rgb: 'FF1E293B' } }, alignment: { horizontal: 'center', vertical: 'center' } };
-        
-        // Header row 2 cell style
+
         const cellAddr2 = XLSX.utils.encode_cell({ r: 1, c: C });
         const cell2 = ws[cellAddr2];
         if (cell2) cell2.s = { font: { bold: true, color: { rgb: 'FF1E293B' } }, fill: { fgColor: { rgb: 'FFE2E8F0' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+      }
+    } catch (e) {
+      // ignore styling errors
     }
-
 
     // Column widths heuristic
     const headerCombined = headerRow1.map((h, i) => {
-        const sub = headerRow2[i];
-        return sub && sub.length > 0 ? sub : h;
+      const sub = headerRow2[i];
+      return sub && sub.length > 0 ? sub : h;
     });
     const colWidths = headerCombined.map((h, i) => {
-        let max = String(h).length;
-        for (let r = 0; r < dataRows.length; ++r) {
-            const v = dataRows[r][i];
-            const len = v ? String(v).length : 0;
-            if (len > max) max = len;
-        }
-        return { wch: Math.min(Math.max(max + 2, 12), 60) };
+      let max = String(h).length;
+      for (let r = 0; r < dataRows.length; ++r) {
+        const v = dataRows[r][i];
+        const len = v ? String(v).length : 0;
+        if (len > max) max = len;
+      }
+      return { wch: Math.min(Math.max(max + 2, 12), 60) };
     });
     ws['!cols'] = colWidths;
 
@@ -564,154 +580,154 @@ export default function Responses() {
   // --- Render Table ---
   return (
     <div className="space-y-4 p-2 bg-slate-50">
-  
-  {/* Header + controls */}
-  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white rounded-l shadow-md border border-slate-100">
-    <div className="flex items-center gap-4">
-      <h2 className="text-xl font-bold text-gray-800">
-        Total Responses: <span className="text-indigo-600">{responses.length}</span>
-      </h2>
-      <button
-        onClick={loadResponses}
-        className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium"
-        title="Refresh"
-      >
-        <RefreshCw size={16} />
-        Refresh
-      </button>
-    </div>
 
-    <div className="flex items-center gap-3 flex-1 justify-end">
-      {/* Search Bar - Integrated in header */}
-      <div className="relative flex-1 max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        <input
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          placeholder="Search name, employee ID, or email..."
-          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-sm"
-        />
-        {searchTerm && (
+      {/* Header + controls */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white rounded-l shadow-md border border-slate-100">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold text-gray-800">
+            Total Responses: <span className="text-indigo-600">{responses.length}</span>
+          </h2>
           <button
-            onClick={clearFilters}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-            title="Clear search"
+            onClick={loadResponses}
+            className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium"
+            title="Refresh"
           >
-            <X size={16} />
+            <RefreshCw size={16} />
+            Refresh
           </button>
-        )}
-      </div>
-
-      {/* Results Count Badge */}
-      {searchTerm && (
-        <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-          <span className="font-medium">{filteredResponses.length}</span>
-          <span>of</span>
-          <span className="font-medium">{responses.length}</span>
-          <span>results</span>
         </div>
-      )}
 
-      {/* Columns Dropdown */}
-      <div className="relative" ref={columnsDropdownRef}>
-        <button
-          onClick={() => setShowColumnsDropdown(s => !s)}
-          className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium border border-gray-300"
-          title="Toggle columns"
-        >
-          <Columns size={16} />
-          Columns ({Object.values(visibleColumns).filter(v => v).length - Object.keys(SKILL_SECTIONS).length} visible)
-        </button>
-
-        {showColumnsDropdown && (
-          <div className="absolute z-40 mt-2 right-0 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl p-4 transition-all duration-300 origin-top-right animate-fade-in-down">
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-              <strong className="text-slate-800">Column Visibility</strong>
+        <div className="flex items-center gap-3 flex-1 justify-end">
+          {/* Search Bar - Integrated in header */}
+          <div className="relative flex-1 max-w-md">
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search name, employee ID, or email..."
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-sm"
+            />
+            {searchTerm && (
               <button
-                onClick={() => {
-                  const allOn = Object.values(visibleColumns).filter(v => typeof v === 'boolean' && !v).length === 0;
-                  const next: Record<string, boolean> = {};
-                  Object.keys(visibleColumns).forEach(k => (next[k] = !allOn));
-                  setVisibleColumns(next);
-                }}
-                className="text-xs text-indigo-600 hover:text-indigo-800"
+                onClick={clearFilters}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                title="Clear search"
               >
-                Toggle all
+                <X size={16} />
               </button>
+            )}
+          </div>
+
+          {/* Results Count Badge */}
+          {searchTerm && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+              <span className="font-medium">{filteredResponses.length}</span>
+              <span>of</span>
+              <span className="font-medium">{responses.length}</span>
+              <span>results</span>
             </div>
+          )}
 
-            <div className="max-h-80 overflow-y-auto space-y-2">
-              {/* Base Columns */}
-              {headerOrder.filter(h => !h.startsWith('section_') && h !== 'actions' && h !== 'timestamp').map(h => (
-                <label key={h} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50 rounded px-2">
-                  <input
-                    type="checkbox"
-                    checked={!!visibleColumns[h]}
-                    onChange={() => toggleColumn(h)}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span>{h === 'number' ? 'No.' : h.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
-                </label>
-              ))}
-              <hr className="my-2 border-gray-100" />
+          {/* Columns Dropdown */}
+          <div className="relative" ref={columnsDropdownRef}>
+            <button
+              onClick={() => setShowColumnsDropdown(s => !s)}
+              className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium border border-gray-300"
+              title="Toggle columns"
+            >
+              <Columns size={16} />
+              Columns ({Object.values(visibleColumns).filter(v => v).length - Object.keys(SKILL_SECTIONS).length} visible)
+            </button>
 
-              {/* Sections and Subskills */}
-              {Object.entries(SKILL_SECTIONS).map(([sectionKey, section]) => (
-                <div key={sectionKey} className="mb-2 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100">
-                  <label className="flex items-center gap-2 text-sm font-semibold py-1 cursor-pointer text-indigo-800">
-                    <input
-                      type="checkbox"
-                      checked={!!visibleColumns[`section_${sectionKey}`]}
-                      onChange={() => toggleColumn(`section_${sectionKey}`)}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span>{section.title}</span>
-                  </label>
+            {showColumnsDropdown && (
+              <div className="absolute z-40 mt-2 right-0 w-80 bg-white border border-gray-200 rounded-xl shadow-2xl p-4 transition-all duration-300 origin-top-right animate-fade-in-down">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
+                  <strong className="text-slate-800">Column Visibility</strong>
+                  <button
+                    onClick={() => {
+                      const allOn = Object.values(visibleColumns).filter(v => typeof v === 'boolean' && !v).length === 0;
+                      const next: Record<string, boolean> = {};
+                      Object.keys(visibleColumns).forEach(k => (next[k] = !allOn));
+                      setVisibleColumns(next);
+                    }}
+                    className="text-xs text-indigo-600 hover:text-indigo-800"
+                  >
+                    Toggle all
+                  </button>
+                </div>
 
-                  <div className="ml-5 border-l border-indigo-200 pl-3 pt-1 space-y-1">
-                    {(subOrder[sectionKey] || []).map((skill: string) => (
-                      <label key={skill} className="flex items-center gap-2 text-sm py-0.5 cursor-pointer hover:bg-white rounded px-2">
+                <div className="max-h-80 overflow-y-auto space-y-2">
+                  {/* Base Columns */}
+                  {headerOrder.filter(h => !h.startsWith('section_') && h !== 'actions' && h !== 'timestamp').map(h => (
+                    <label key={h} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50 rounded px-2">
+                      <input
+                        type="checkbox"
+                        checked={!!visibleColumns[h]}
+                        onChange={() => toggleColumn(h)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>{h === 'number' ? 'No.' : h.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                    </label>
+                  ))}
+                  <hr className="my-2 border-gray-100" />
+
+                  {/* Sections and Subskills */}
+                  {Object.entries(SKILL_SECTIONS).map(([sectionKey, section]) => (
+                    <div key={sectionKey} className="mb-2 p-2 rounded-lg bg-indigo-50/50 border border-indigo-100">
+                      <label className="flex items-center gap-2 text-sm font-semibold py-1 cursor-pointer text-indigo-800">
                         <input
                           type="checkbox"
-                          checked={!!visibleColumns[skill]}
-                          onChange={() => toggleColumn(skill)}
+                          checked={!!visibleColumns[`section_${sectionKey}`]}
+                          onChange={() => toggleColumn(`section_${sectionKey}`)}
                           className="rounded text-indigo-600 focus:ring-indigo-500"
                         />
-                        <span>{skill}</span>
+                        <span>{section.title}</span>
                       </label>
-                    ))}
-                  </div>
+
+                      <div className="ml-5 border-l border-indigo-200 pl-3 pt-1 space-y-1">
+                        {(subOrder[sectionKey] || []).map((skill: string) => (
+                          <label key={skill} className="flex items-center gap-2 text-sm py-0.5 cursor-pointer hover:bg-white rounded px-2">
+                            <input
+                              type="checkbox"
+                              checked={!!visibleColumns[skill]}
+                              onChange={() => toggleColumn(skill)}
+                              className="rounded text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span>{skill}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <hr className="my-2 border-gray-100" />
+
+                  {/* End Columns */}
+                  {['additional_skills', 'timestamp', 'actions'].map(h => (
+                    <label key={h} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50 rounded px-2">
+                      <input
+                        type="checkbox"
+                        checked={!!visibleColumns[h]}
+                        onChange={() => toggleColumn(h)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>{h.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+                    </label>
+                  ))}
                 </div>
-              ))}
-              <hr className="my-2 border-gray-100" />
-
-              {/* End Columns */}
-              {['additional_skills', 'timestamp', 'actions'].map(h => (
-                <label key={h} className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50 rounded px-2">
-                  <input
-                    type="checkbox"
-                    checked={!!visibleColumns[h]}
-                    onChange={() => toggleColumn(h)}
-                    className="rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <span>{h.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
-                </label>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Export Button */}
-      <button
-        onClick={downloadExcel}
-        className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition shadow-md text-sm font-medium"
-        title="Export visible rows to XLSX (Submitted & Actions excluded)"
-      >
-        <Download size={16} /> Export
-      </button>
-    </div>
-  </div>
+          {/* Export Button */}
+          <button
+            onClick={downloadExcel}
+            className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition shadow-md text-sm font-medium"
+            title="Export visible rows to XLSX (Submitted & Actions excluded)"
+          >
+            <Download size={16} /> Export
+          </button>
+        </div>
+      </div>
 
       {/* Table Container - Smooth Scrolling */}
       <div className="bg-white rounded-l shadow-2xl overflow-hidden border border-gray-200 max-h-[150vh] relative">
@@ -745,7 +761,7 @@ export default function Responses() {
                         onDrop={(e) => handleHeaderDrop(e, hdr)}
                         className={`sticky top-0 z-20 px-4 py-3 bg-slate-600 text-white text-left font-bold border-r border-b border-slate-700 cursor-move transition-colors whitespace-nowrap ${hdr === 'number' ? 'w-1' : ''}`}
                       >
-                         {title}
+                        {title}
                       </th>
                     );
                   }
@@ -828,88 +844,88 @@ export default function Responses() {
                       // Simple columns
                       if (!hdr.startsWith('section_')) {
                         const cellClasses = `p-3 border-r border-b border-gray-200 whitespace-nowrap overflow-hidden text-ellipsis ${hdr === 'number' ? 'text-center' : 'text-left'}`;
-                        
+
                         // Action buttons cell
                         if (hdr === 'actions') {
-                            return (
-                                <td key={hdr} className={`${cellClasses} w-1 bg-gray-100/50`}>
-                                    <div className="flex items-center justify-center gap-2">
-                                        {isEditing ? (
-                                            <>
-                                                <button
-                                                    onClick={() => saveEdit(response._id!)}
-                                                    className="p-1.5 rounded-full text-white bg-green-500 hover:bg-green-600 transition disabled:opacity-50"
-                                                    disabled={deleting}
-                                                    title="Save"
-                                                >
-                                                    <Save size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={cancelEdit}
-                                                    className="p-1.5 rounded-full text-white bg-red-500 hover:bg-red-600 transition"
-                                                    title="Cancel"
-                                                >
-                                                    <X size={18} />
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <button
-                                                    onClick={() => startEdit(response)}
-                                                    className="p-1.5 rounded-full text-white bg-indigo-500 hover:bg-indigo-600 transition"
-                                                    title="Edit"
-                                                >
-                                                    <Edit2 size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setShowDeleteModal(response._id!)}
-                                                    className="p-1.5 rounded-full text-white bg-red-400 hover:bg-red-500 transition"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </td>
-                            );
+                          return (
+                            <td key={hdr} className={`${cellClasses} w-1 bg-gray-100/50`}>
+                              <div className="flex items-center justify-center gap-2">
+                                {isEditing ? (
+                                  <>
+                                    <button
+                                      onClick={() => saveEdit(response._id!)}
+                                      className="p-1.5 rounded-full text-white bg-green-500 hover:bg-green-600 transition disabled:opacity-50"
+                                      disabled={deleting}
+                                      title="Save"
+                                    >
+                                      <Save size={18} />
+                                    </button>
+                                    <button
+                                      onClick={cancelEdit}
+                                      className="p-1.5 rounded-full text-white bg-red-500 hover:bg-red-600 transition"
+                                      title="Cancel"
+                                    >
+                                      <X size={18} />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => startEdit(response)}
+                                      className="p-1.5 rounded-full text-white bg-indigo-500 hover:bg-indigo-600 transition"
+                                      title="Edit"
+                                    >
+                                      <Edit2 size={18} />
+                                    </button>
+                                    <button
+                                      onClick={() => setShowDeleteModal(response._id!)}
+                                      className="p-1.5 rounded-full text-white bg-red-400 hover:bg-red-500 transition"
+                                      title="Delete"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          );
                         }
 
                         // Editable input fields
                         if (isEditing && (hdr === 'name' || hdr === 'employee_id' || hdr === 'email' || hdr === 'additional_skills')) {
-                            const isLongText = hdr === 'additional_skills';
-                            return (
-                                <td key={hdr} className={cellClasses}>
-                                    {isLongText ? (
-                                        <textarea
-                                            value={editData[hdr] || ''}
-                                            onChange={(e) => setEditData({ ...editData, [hdr]: e.target.value })}
-                                            className="w-full p-1 border rounded focus:ring-indigo-500 text-xs h-16 resize-none"
-                                        />
-                                    ) : (
-                                        <input
-                                            type="text"
-                                            value={editData[hdr] || ''}
-                                            onChange={(e) => setEditData({ ...editData, [hdr]: e.target.value })}
-                                            className="w-full p-1 border rounded focus:ring-indigo-500 text-sm"
-                                        />
-                                    )}
-                                </td>
-                            );
+                          const isLongText = hdr === 'additional_skills';
+                          return (
+                            <td key={hdr} className={cellClasses}>
+                              {isLongText ? (
+                                <textarea
+                                  value={editData[hdr] || ''}
+                                  onChange={(e) => setEditData({ ...editData, [hdr]: e.target.value })}
+                                  className="w-full p-1 border rounded focus:ring-indigo-500 text-xs h-16 resize-none"
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={editData[hdr] || ''}
+                                  onChange={(e) => setEditData({ ...editData, [hdr]: e.target.value })}
+                                  className="w-full p-1 border rounded focus:ring-indigo-500 text-sm"
+                                />
+                              )}
+                            </td>
+                          );
                         }
-                        
+
                         // Display cells
-                        const value = 
-                            hdr === 'number' ? index + 1 :
+                        const value =
+                          hdr === 'number' ? index + 1 :
                             hdr === 'timestamp' ? formatDate(response.timestamp) :
-                            response[hdr as keyof EmployeeResponse] || '';
+                              response[hdr as keyof EmployeeResponse] || '';
 
                         return (
-                            <td key={hdr} className={cellClasses}>
-                                <span className={hdr === 'employee_id' ? 'font-mono text-indigo-700 font-semibold' : hdr === 'name' ? 'font-semibold' : 'text-gray-600'}>
-                                    {value}
-                                </span>
-                            </td>
+                          <td key={hdr} className={cellClasses}>
+                            <span className={hdr === 'employee_id' ? 'font-mono text-indigo-700 font-semibold' : hdr === 'name' ? 'font-semibold' : 'text-gray-600'}>
+                              {value}
+                            </span>
+                          </td>
                         );
                       }
 
@@ -926,38 +942,38 @@ export default function Responses() {
                             const cellClasses = `p-3 text-center border-r border-b border-gray-200 transition-all`;
 
                             if (isEditing) {
-                                return (
-                                    <td key={skill} className={cellClasses}>
-                                        <select
-                                            value={rating}
-                                            onChange={(e) => handleRatingChange(skill, parseInt(e.target.value))}
-                                            className="w-full p-1 text-sm border rounded focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-                                        >
-                                            <option value={0}>Unrated</option>
-                                            {[1, 2, 3, 4, 5].map(r => (
-                                                <option key={r} value={r}>
-                                                    {RATING_LABELS[r]} ({r})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                );
+                              return (
+                                <td key={skill} className={cellClasses}>
+                                  <select
+                                    value={rating}
+                                    onChange={(e) => handleRatingChange(skill, parseInt(e.target.value))}
+                                    className="w-full p-1 text-sm border rounded focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                                  >
+                                    <option value={0}>Unrated</option>
+                                    {[1, 2, 3, 4, 5].map(r => (
+                                      <option key={r} value={r}>
+                                        {RATING_LABELS[r]} ({r})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                              );
                             }
 
                             // Display mode for skill ratings
                             return (
-                                <td key={skill} className={cellClasses}>
-                                    {rating > 0 ? (
-                                        <div className="flex flex-col items-center justify-center">
-                                            <div className="flex items-center gap-1">
-                                                <span className="text-lg font-bold text-indigo-600">{rating}</span>
-                                            </div>
-                                            <span className="text-xs text-gray-500">{ratingText}</span>
-                                        </div>
-                                    ) : (
-                                        <span className="text-xs text-gray-400">N/A</span>
-                                    )}
-                                </td>
+                              <td key={skill} className={cellClasses}>
+                                {rating > 0 ? (
+                                  <div className="flex flex-col items-center justify-center">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-lg font-bold text-indigo-600">{rating}</span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">{ratingText}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-400">N/A</span>
+                                )}
+                              </td>
                             );
                           })
                       );
@@ -968,9 +984,9 @@ export default function Responses() {
             </tbody>
           </table>
           {filteredResponses.length === 0 && searchTerm && (
-              <div className="p-8 text-center text-lg text-gray-500 bg-white">
-                  No results found for "{searchTerm}".
-              </div>
+            <div className="p-8 text-center text-lg text-gray-500 bg-white">
+              No results found for "{searchTerm}".
+            </div>
           )}
         </div>
       </div>
@@ -1005,7 +1021,7 @@ export default function Responses() {
           </div>
         </div>
       )}
-      
+
       {/* Tailwind animation classes for reference */}
       <style>{`
         .animate-fade-in-down {
