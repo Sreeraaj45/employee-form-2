@@ -122,15 +122,23 @@ export default function EmployeeForm() {
 
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'success' | 'error' | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const handleRatingChange = (skill: string, section: string, rating: number) => {
     setFormData(prev => {
       const existing = prev.skillRatings.find(sr => sr.skill === skill && sr.section === section);
-      const newRatings = existing
-        ? prev.skillRatings.map(sr =>
+      let newRatings;
+      if (existing) {
+        if (existing.rating === rating) {
+          newRatings = prev.skillRatings.filter(sr => !(sr.skill === skill && sr.section === section));
+        } else {
+          newRatings = prev.skillRatings.map(sr =>
             sr.skill === skill && sr.section === section ? { ...sr, rating } : sr
-          )
-        : [...prev.skillRatings, { skill, section, rating }];
+          );
+        }
+      } else {
+        newRatings = [...prev.skillRatings, { skill, section, rating }];
+      }
       return { ...prev, skillRatings: newRatings };
     });
   };
@@ -151,11 +159,13 @@ export default function EmployeeForm() {
     const validationError = validateForm();
     if (validationError) {
       setStatus('error');
-      console.error(validationError);
+      setErrorMessage(validationError);
+      setTimeout(() => setStatus(null), 4000);
       return;
     }
     setLoading(true);
     setStatus(null);
+    setErrorMessage('');
     try {
       await api.createResponse({
         name: formData.name,
@@ -169,9 +179,10 @@ export default function EmployeeForm() {
       setCurrentStep(0);
       setStatus('success');
       confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setStatus('error');
+      setErrorMessage(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
       setTimeout(() => setStatus(null), 4000);
@@ -441,8 +452,8 @@ export default function EmployeeForm() {
           </div>
         )}
         {status === 'error' && (
-          <div className="fixed bottom-6 right-6 bg-rose-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce-in">
-            <AlertCircle /> <span>Oops! Something went wrong 😢</span>
+          <div className="fixed bottom-6 right-6 bg-rose-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce-in max-w-sm">
+            <AlertCircle className="flex-shrink-0" /> <span>{errorMessage || 'Oops! Something went wrong'}</span>
           </div>
         )}
       </div>
