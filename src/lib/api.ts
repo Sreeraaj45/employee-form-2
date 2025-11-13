@@ -1,4 +1,13 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+// Auto-detect environment
+const isDevelopment = window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1';
+
+const API_BASE_URL = isDevelopment 
+  ? 'http://localhost:3001/api' 
+  : '/api';  // Relative path for production
+
+console.log('🌍 Environment:', isDevelopment ? 'Development' : 'Production');
+console.log('🔗 API Base URL:', API_BASE_URL);
 
 interface EmployeeResponse {
   _id?: string;  // Changed from id?: number to _id?: string for MongoDB
