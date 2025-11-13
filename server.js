@@ -351,11 +351,9 @@ app.put('/api/schemas/:id', requireDB, async (req, res) => {
 });
 
 // ========== CATCH-ALL ROUTE FOR REACT APP ==========
-// This must be AFTER all your API routes
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
-
 // ========== SERVER STARTUP ==========
 app.listen(port, async () => {
   await initializeDatabase();
