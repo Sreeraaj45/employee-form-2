@@ -101,6 +101,7 @@ export default function Analytics() {
   const modalPieChartInstance = useRef<any>(null);
 
   const [isPieModalOpen, setIsPieModalOpen] = useState(false);
+  const [isBarModalOpen, setIsBarModalOpen] = useState(false);
 
   useEffect(() => {
     loadAnalytics();
@@ -125,7 +126,6 @@ export default function Analytics() {
     if (isPieModalOpen) {
       createModalPieChart();
     }
-    // dispose previous chart on rerender by create* functions themselves
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skillAnalytics]);
 
@@ -195,17 +195,19 @@ export default function Analytics() {
     setSkillAnalytics(analytics.sort((a, b) => b.count - a.count));
   };
 
-  const topSkills = skillAnalytics.slice(0, 5);
+  const top5Skills = skillAnalytics.slice(0, 5);
+  const top10Skills = skillAnalytics.slice(0, 10);
+
   const avgRating =
     skillAnalytics.length > 0 ? (skillAnalytics.reduce((sum, s) => sum + s.avgRating, 0) / skillAnalytics.length).toFixed(1) : "0";
 
-  // Chart.js Bar Chart: Top 5 skills (already present)
+  // Chart.js Bar Chart: Top 5 skills (small)
   const barChartData = {
-    labels: topSkills.map((s) => s.skill),
+    labels: top5Skills.map((s) => s.skill),
     datasets: [
       {
         label: "Employees per Skill",
-        data: topSkills.map((s) => s.count),
+        data: top5Skills.map((s) => s.count),
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 300);
@@ -224,11 +226,7 @@ export default function Analytics() {
     responsive: true,
     plugins: {
       legend: {
-        position: "right" as const,
-        labels: {
-          color: "#374151",
-          boxWidth: 20,
-        },
+        display: false, // <= removed legend
       },
       title: {
         display: true,
@@ -250,45 +248,50 @@ export default function Analytics() {
     },
   };
 
-  // Additional analytics: rating distribution (how many ratings at each level 1..5)
-  const ratingDistribution = (() => {
-    const dist = new Array(6).fill(0); // index 0 unused
-    responses.forEach((r) => {
-      (r.skill_ratings || []).forEach((sr) => {
-        if (sr.rating >= 1 && sr.rating <= 5) dist[sr.rating] = dist[sr.rating] + 1;
-      });
-    });
-    return dist.slice(1); // return [count1..count5]
-  })();
-
-  const ratingDistData = {
-    labels: ["1", "2", "3", "4", "5"],
+  // Modal bar (Top 10)
+  const barModalData = {
+    labels: top10Skills.map((s) => s.skill),
     datasets: [
       {
-        label: "Ratings count",
-        data: ratingDistribution,
-        backgroundColor: ["#F87171", "#FB923C", "#FBBF24", "#34D399", "#60A5FA"],
-        borderColor: "rgba(0,0,0,0.05)",
+        label: "Employees per Skill",
+        data: top10Skills.map((s) => s.count),
+        backgroundColor: (context: any) => {
+          const ctx = context.chart.ctx;
+          const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+          gradient.addColorStop(0, "rgba(59,130,246,0.9)");
+          gradient.addColorStop(1, "rgba(29,78,216,0.7)");
+          return gradient;
+        },
+        borderColor: "rgba(37,99,235,1)",
         borderWidth: 1,
-        borderRadius: 4,
+        borderRadius: 6,
       },
     ],
   };
 
-  const ratingDistOptions = {
-    indexAxis: "y" as const,
+  const barModalOptions = {
+    responsive: true,
     plugins: {
-      legend: { display: false },
+      legend: {
+        display: false,
+      },
       title: {
         display: true,
-        text: "Ratings Distribution",
+        text: "Top 10 Most Common Skills",
         color: "#111827",
-        font: { size: 14, weight: "600" as const },
+        font: { size: 18, weight: "bold" as const },
       },
     },
     scales: {
-      x: { ticks: { color: "#374151" } },
-      y: { ticks: { color: "#374151" } },
+      x: {
+        grid: { display: false },
+        ticks: { color: "#4B5563" },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: "rgba(229,231,235,0.4)" },
+        ticks: { color: "#4B5563" },
+      },
     },
   };
 
@@ -314,8 +317,18 @@ export default function Analytics() {
     }
 
     const chart = am4core.create(div, am4charts.PieChart3D);
+    // remove amCharts watermark/logo
+    try {
+      // disable the logo
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      chart.logo && (chart.logo.disabled = true);
+    } catch (e) {
+      // ignore
+    }
+
     chart.hiddenState.properties.opacity = 0;
-    chart.legend = undefined;
+    // chart.legend = undefined;
     chart.data = skillAnalytics.map((s) => ({ category: s.skill, value: s.count }));
     const series = chart.series.push(new am4charts.PieSeries3D());
     series.dataFields.value = "value";
@@ -410,8 +423,20 @@ export default function Analytics() {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <Bar data={barChartData} options={barChartOptions} />
+        <div className="bg-white rounded-lg shadow-lg p-6 relative flex flex-col">
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Top Skills (Top 5)</h3>
+            <button
+              onClick={() => setIsBarModalOpen(true)}
+              title="Open bar chart fullscreen (Top 10)"
+              className="p-2 rounded hover:bg-gray-100"
+            >
+              <Maximize2 size={18} />
+            </button>
+          </div>
+          <div>
+            <Bar data={barChartData} options={barChartOptions} />
+          </div>
         </div>
 
         {/* 3D Pie Chart (small) with fullscreen button */}
@@ -433,19 +458,9 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Additional Analytics Row: rating distribution + skills by section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-lg p-6 col-span-1 lg:col-span-1">
-          <h3 className="text-lg font-semibold mb-4">Ratings Distribution</h3>
-          <div style={{ height: 180 }}>
-            <Bar data={ratingDistData} options={ratingDistOptions} />
-          </div>
-          <div className="mt-4 text-sm text-gray-600">
-            Counts are aggregated across all skill ratings provided in responses.
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6 col-span-2 lg:col-span-2">
+      {/* Skills by Section */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
           <h3 className="text-lg font-semibold mb-4">Skills by Section</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {skillsBySection.map((s) => (
@@ -464,8 +479,8 @@ export default function Analytics() {
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h3 className="text-lg font-bold text-gray-800 mb-4">Top Skills</h3>
           <div className="space-y-4">
-            {topSkills.length > 0 ? (
-              topSkills.map((skill, index) => (
+            {top5Skills.length > 0 ? (
+              top5Skills.map((skill, index) => (
                 <div key={index}>
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-gray-700">{skill.skill}</span>
@@ -534,6 +549,34 @@ export default function Analytics() {
 
             <div className="p-4 h-full">
               <div ref={modalChartRef} style={{ width: "95%", height: "95%" }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Modal for Bar Chart (Top 10) */}
+      {isBarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl h-[90vh] overflow-hidden relative">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Top 10 Skills</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setIsBarModalOpen(false);
+                  }}
+                  title="Close"
+                  className="p-2 rounded hover:bg-gray-100"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 h-full">
+              <div style={{ width: "90%", height: "100%" }}>
+                <Bar data={barModalData} options={barModalOptions} />
+              </div>
             </div>
           </div>
         </div>
