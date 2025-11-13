@@ -1,16 +1,25 @@
 import express from 'express';
 import cors from 'cors';
 import mongodb from 'mongodb';
+import path from 'path';
+import { fileURLToPath } from 'url';
 const { MongoClient, ObjectId } = mongodb;
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
+
+// Get __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from React build (dist folder)
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // MongoDB/Cosmos DB connection
 const connectionString = process.env.VITE_MONGODB_URI;
@@ -39,25 +48,6 @@ const initializeDatabase = async () => {
   }
 };
 
-// In server.js
-const connectWithRetry = async (retries = 5, delay = 5000) => {
-  while (retries > 0) {
-    try {
-      await client.connect();
-      db = client.db(process.env.VITE_MONGODB_DATABASE || 'employee_skills');
-      console.log('Connected to MongoDB/Cosmos DB successfully');
-      return;
-    } catch (error) {
-      console.error(`Connection failed. Retries left: ${retries - 1}`, error);
-      retries--;
-      if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  throw new Error('Failed to connect to database after retries');
-};
-
 // Database connection middleware
 const requireDB = (req, res, next) => {
   if (!db) {
@@ -69,20 +59,9 @@ const requireDB = (req, res, next) => {
   next();
 };
 
-// Routes
-app.get('/api/responses', requireDB, async (req, res) => {
-  try {
-    const responses = await db.collection('employee_responses')
-      .find()
-      .sort({ timestamp: -1 })
-      .toArray();
-    res.json(responses);
-  } catch (error) {
-    console.error('Error fetching responses:', error);
-    res.status(500).json({ error: 'Failed to fetch responses' });
-  }
-});
-// Add this route to your server.js - place it before your other routes
+// ========== API ROUTES ==========
+
+// Root route - serve API info
 app.get('/', (req, res) => {
   res.json({
     message: 'Employee Skills API Server is running!',
@@ -101,16 +80,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Add a simple test endpoint
-app.get('/api/test', (req, res) => {
-  res.json({ 
-    message: 'API is working!', 
-    timestamp: new Date(),
-    database: db ? 'connected' : 'disconnected'
-  });
-});
-
-// Your existing health endpoint (keep this)
+// Health check endpoint
 app.get('/api/health', async (req, res) => {
   if (!db) {
     return res.status(503).json({ 
@@ -135,8 +105,20 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Your existing API routes (keep all of these)
+app.get('/api/responses', requireDB, async (req, res) => {
+  try {
+    const responses = await db.collection('employee_responses')
+      .find()
+      .sort({ timestamp: -1 })
+      .toArray();
+    res.json(responses);
+  } catch (error) {
+    console.error('Error fetching responses:', error);
+    res.status(500).json({ error: 'Failed to fetch responses' });
+  }
+});
 
-// ✅ FIXED: Only ONE POST /api/responses route
 app.post('/api/responses', requireDB, async (req, res) => {
   console.log('📝 POST /api/responses received');
   console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
@@ -258,6 +240,7 @@ app.post('/api/responses', requireDB, async (req, res) => {
   }
 });
 
+// Keep all your other existing API routes...
 app.put('/api/responses/:id', requireDB, async (req, res) => {
   try {
     const { id } = req.params;
@@ -333,7 +316,6 @@ app.get('/api/schemas', requireDB, async (req, res) => {
   }
 });
 
-
 app.put('/api/schemas/:id', requireDB, async (req, res) => {
   try {
     const { id } = req.params;
@@ -368,112 +350,17 @@ app.put('/api/schemas/:id', requireDB, async (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get('/api/health', async (req, res) => {
-  if (!db) {
-    return res.status(503).json({ 
-      status: 'unhealthy', 
-      database: 'disconnected'
-    });
-  }
-  
-  try {
-    await db.command({ ping: 1 });
-    res.json({ 
-      status: 'healthy', 
-      database: 'connected',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(503).json({ 
-      status: 'unhealthy', 
-      database: 'error', 
-      error: error.message
-    });
-  }
+// ========== CATCH-ALL ROUTE FOR REACT APP ==========
+// This must be AFTER all your API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// ========== SERVER STARTUP ==========
 app.listen(port, async () => {
   await initializeDatabase();
-  console.log(`Backend API server running on http://localhost:${port}`);
-});
-
-app.get('/api/debug/db-status', requireDB, async (req, res) => {
-  try {
-    const pingResult = await db.command({ ping: 1 });
-    const collections = await db.listCollections().toArray();
-    
-    res.json({
-      status: 'connected',
-      ping: pingResult,
-      database: db.databaseName,
-      collections: collections.map(c => c.name),
-      timestamp: new Date()
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      error: error.message,
-      timestamp: new Date()
-    });
-  }
-});
-
-// Test collection operations
-app.get('/api/debug/collection-test', requireDB, async (req, res) => {
-  try {
-    const testDoc = {
-      test: 'diagnostic',
-      timestamp: new Date(),
-      random: Math.random()
-    };
-    
-    // Test insert
-    const insertResult = await db.collection('employee_responses').insertOne(testDoc);
-    console.log('✅ Diagnostic insert successful:', insertResult.insertedId);
-    
-    // Test find
-    const foundDoc = await db.collection('employee_responses').findOne({_id: insertResult.insertedId});
-    console.log('✅ Diagnostic find successful:', foundDoc ? 'found' : 'not found');
-    
-    // Test delete
-    const deleteResult = await db.collection('employee_responses').deleteOne({_id: insertResult.insertedId});
-    console.log('✅ Diagnostic delete successful:', deleteResult.deletedCount);
-    
-    res.json({
-      status: 'all operations successful',
-      insert: insertResult.insertedId ? 'success' : 'failed',
-      find: foundDoc ? 'success' : 'failed', 
-      delete: deleteResult.deletedCount > 0 ? 'success' : 'failed',
-      timestamp: new Date()
-    });
-  } catch (error) {
-    console.error('❌ Diagnostic test failed:', error);
-    res.status(500).json({
-      status: 'diagnostic failed',
-      error: error.message,
-      timestamp: new Date()
-    });
-  }
-});
-
-// Check if collection exists and has documents
-app.get('/api/debug/collection-info', requireDB, async (req, res) => {
-  try {
-    const collection = db.collection('employee_responses');
-    const count = await collection.countDocuments();
-    const indexes = await collection.indexes();
-    
-    res.json({
-      collection: 'employee_responses',
-      documentCount: count,
-      indexes: indexes,
-      timestamp: new Date()
-    });
-  } catch (error) {
-    res.status(500).json({
-      error: error.message,
-      timestamp: new Date()
-    });
-  }
+  console.log(`🚀 Full-stack server running on port ${port}`);
+  console.log(`📁 Serving React app from: ${path.join(__dirname, 'dist')}`);
+  console.log(`🔗 API available at: http://localhost:${port}/api`);
+  console.log(`🌐 Frontend available at: http://localhost:${port}`);
 });
