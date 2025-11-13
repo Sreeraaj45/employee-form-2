@@ -13,7 +13,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   ];
 
   return (
-    <div className="bg-white h-full w-64 shadow-lg flex flex-col">
+    <div className="bg-white h-full w-50 shadow-lg flex flex-col">
 
       {/* Logo & Title */}
       <div className="p-6 border-b">

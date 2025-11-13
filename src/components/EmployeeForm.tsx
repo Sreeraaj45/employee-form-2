@@ -231,7 +231,7 @@ export default function EmployeeForm() {
       <div className="absolute -top-24 -left-20 w-72 h-72 bg-pink-200 opacity-30 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 opacity-30 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
-      <div className="max-w-5xl mx-auto px-6 relative z-10">
+      <div className="max-w-5xl mx-auto px-10 relative z-10">
         <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-xl shadow-xl p-10 text-white mb-6 flex items-center justify-between">
           <img
             src="src/assets/logo.png"
