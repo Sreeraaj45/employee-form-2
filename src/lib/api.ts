@@ -1,13 +1,7 @@
-// Use relative URLs for single deployment
-const API_BASE_URL = '/api';
-
-// Or for automatic detection (recommended):
-// const API_BASE_URL = window.location.origin.includes('localhost') 
-//   ? 'http://localhost:3001/api' 
-//   : '/api';
+const API_BASE_URL = 'http://localhost:3001/api';
 
 interface EmployeeResponse {
-  _id?: string;
+  _id?: string;  // Changed from id?: number to _id?: string for MongoDB
   name: string;
   employee_id: string;
   email: string;
@@ -18,12 +12,13 @@ interface EmployeeResponse {
 }
 
 interface FormSchema {
-  _id?: string;
+  _id?: string;  // Changed from id?: number to _id?: string for MongoDB
   schema: any;
   version?: number;
 }
 
 export const api = {
+  // Add this missing method
   async getResponses(): Promise<EmployeeResponse[]> {
     console.log('🔄 Fetching responses from API...');
     const response = await fetch(`${API_BASE_URL}/responses`);
@@ -60,6 +55,7 @@ export const api = {
     console.log('📡 Response status:', response.status);
     
     if (!response.ok) {
+      // Get detailed error message from response body
       let errorMessage = `Failed to create response: ${response.status}`;
       let errorDetails = '';
       
@@ -69,6 +65,7 @@ export const api = {
         errorMessage = errorData.error || errorData.message || errorMessage;
         errorDetails = errorData.details || errorData.code || '';
       } catch (parseError) {
+        // If response is not JSON, get text
         const errorText = await response.text();
         console.error('🔍 Backend error text:', errorText);
         errorMessage = errorText || errorMessage;
