@@ -579,7 +579,7 @@ export default function Responses() {
 
   // --- Render Table ---
   return (
-    <div className="space-y-4 p-2 bg-slate-50">
+    <div className="h-screen flex flex-col p-2 bg-slate-50">
 
       {/* Header + controls */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white rounded-l shadow-md border border-slate-100">
@@ -730,9 +730,9 @@ export default function Responses() {
       </div>
 
       {/* Table Container - Smooth Scrolling */}
-      <div className="bg-white rounded-l shadow-2xl overflow-hidden border border-gray-200 max-h-[150vh] relative">
-        <div className="overflow-auto max-h-[78vh]">
-          <table className="min-w-full border-collapse text-sm">
+      <div className="bg-white rounded-l shadow-2xl overflow-hidden border border-gray-200 flex-1 relative">
+        <div className="overflow-auto h-full">
+          <table className="min-w-full text-sm border-separate border-spacing-0 table-fixed">
             <thead>
               {/* Header Row 1: Main Headers (Personal Info, Skill Sections, Other) - STICKY TOP */}
               <tr>
@@ -759,7 +759,13 @@ export default function Responses() {
                         onDragEnd={handleHeaderDragEnd}
                         onDragOver={handleHeaderDragOver}
                         onDrop={(e) => handleHeaderDrop(e, hdr)}
-                        className={`sticky top-0 z-20 px-4 py-3 bg-slate-600 text-white text-left font-bold border-r border-b border-slate-700 cursor-move transition-colors whitespace-nowrap ${hdr === 'number' ? 'w-1' : ''}`}
+                        className={`sticky top-0 z-30 px-4 py-3 bg-slate-700 text-white text-left font-bold border border-slate-700 whitespace-nowrap
+                          ${hdr === 'number' ? 'left-0 w-[40px] z-40' : ''}
+                          ${hdr === 'name' ? 'left-[55px] w-[180px] z-40' : ''}
+                          ${hdr === 'employee_id' ? 'left-[139px] w-[160px] z-40' : ''}
+                          ${hdr === 'email' ? 'left-[236px] w-[250px] z-40' : ''}
+                        `}
+
                       >
                         {title}
                       </th>
@@ -795,8 +801,21 @@ export default function Responses() {
 
                   // Simple columns get empty spacer to maintain row height
                   if (!hdr.startsWith('section_')) {
-                    return <th key={`${hdr}-spacer`} className="sticky top-[49px] z-10 p-0 h-2 bg-gray-50 border-r border-b border-gray-200"></th>;
+                    const stickyLeft =
+                      hdr === 'number' ? 'left-0 w-[60px]' :
+                      hdr === 'name' ? 'left-[55px] w-[180px]' :
+                      hdr === 'employee_id' ? 'left-[139px] w-[160px]' :
+                      hdr === 'email' ? 'left-[236px] w-[250px]' :
+                      '';
+
+                    return (
+                      <th
+                        key={`${hdr}-spacer`}
+                        className={`sticky top-[49px] z-20 bg-gray-100 border-r border-b border-gray-300 ${stickyLeft}`}
+                      />
+                    );
                   }
+
 
                   // Skill Sections (Subskills)
                   const sectionKey = hdr.replace('section_', '');
@@ -813,7 +832,7 @@ export default function Responses() {
                           onDragEnd={handleSubDragEnd}
                           onDragOver={handleSubDragOver}
                           onDrop={(e) => handleSubDrop(e, sectionKey, skill)}
-                          className={`sticky top-[49px] z-10 px-3 py-1 bg-gray-50 text-xs font-semibold text-gray-700 border-r border-b border-gray-200 cursor-move whitespace-nowrap`}
+                          className={`sticky top-[49px] z-10 px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-700 border-r border-b border-gray-200 cursor-move whitespace-nowrap`}
                           title={`Drag to reorder ${sectionKey} skills`}
                         >
                           {skill}
@@ -843,7 +862,13 @@ export default function Responses() {
 
                       // Simple columns
                       if (!hdr.startsWith('section_')) {
-                        const cellClasses = `p-3 border-r border-b border-gray-200 whitespace-nowrap overflow-hidden text-ellipsis ${hdr === 'number' ? 'text-center' : 'text-left'}`;
+                        const cellClasses = `p-3 whitespace-nowrap overflow-hidden text-ellipsis bg-white border border-gray-200
+                          ${hdr === 'number' ? 'sticky left-0 w-[60px] z-20 bg-white text-center' : ''}
+                          ${hdr === 'name' ? 'sticky left-[56px] w-[180px] z-20 bg-white text-left' : ''}
+                          ${hdr === 'employee_id' ? 'sticky left-[140px] w-[160px] z-20 bg-white text-left' : ''}
+                          ${hdr === 'email' ? 'sticky left-[236px] w-[250px] z-20 bg-white text-left' : ''}
+                        `;
+
 
                         // Action buttons cell
                         if (hdr === 'actions') {
