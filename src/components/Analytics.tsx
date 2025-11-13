@@ -282,18 +282,21 @@ export default function Analytics() {
         },
         borderColor: "rgba(79, 70, 229, 1)",
         borderWidth: 1,
-        borderRadius: 8,
+        borderRadius: 4,
+        // Reduced bar width
+        barPercentage: 0.8,
+        categoryPercentage: 0.8,
       },
     ],
   };
 
   const barChartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
       title: {
         display: true,
-        text: "Top 5 Most Common Skills",
         color: "#111827",
         font: { size: 18, weight: "bold" as const },
       },
@@ -327,12 +330,16 @@ export default function Analytics() {
         borderColor: "rgba(79, 70, 229, 1)",
         borderWidth: 1,
         borderRadius: 8,
+        // Reduced bar width for modal too
+        barPercentage: 0.4,
+        categoryPercentage: 0.6,
       },
     ],
   };
 
   const barModalOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
       title: {
@@ -345,7 +352,11 @@ export default function Analytics() {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { color: "#4B5563" },
+        ticks: { 
+          color: "#4B5563",
+          maxRotation: 45,
+          minRotation: 45,
+        },
       },
       y: {
         beginAtZero: true,
@@ -379,8 +390,7 @@ export default function Analytics() {
     chart.hiddenState.properties.opacity = 0;
     // Limit data to top 15 for readability in small chart
     const dataForPie = skillAnalytics
-      .map((s) => ({ category: s.skill, value: s.count }))
-      .slice(0, 15);
+      .map((s) => ({ category: s.skill, value: s.count }));
     chart.data = dataForPie;
 
     const series = chart.series.push(new am4charts.PieSeries3D());
@@ -467,85 +477,87 @@ export default function Analytics() {
       
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Total Submissions */}
-        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 transition transform hover:scale-[1.01] duration-300">
-          <div className="flex items-center justify-between">
-            <Users className="w-8 h-8 text-indigo-500" />
-            <div className="text-sm font-medium text-gray-600 uppercase tracking-wider">
-              Total Submissions
-            </div>
+      {/* Total Submissions */}
+      <div className="bg-blue-50 rounded-xl shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:bg-blue-100 group">
+        <div className="flex items-center justify-between">
+          <Users className="w-6 h-6 text-blue-500 transition-transform duration-300 group-hover:scale-110" />
+          <div className="text-xs font-medium text-gray-600 uppercase tracking-wider">
+            Total Submissions
           </div>
-          <div className="text-5xl font-extrabold text-indigo-700 mt-3">{responses.length}</div>
-          <p className="text-xs text-gray-400 mt-1">Total responses collected</p>
         </div>
-
-        {/* Unique Skills */}
-        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 transition transform hover:scale-[1.01] duration-300">
-          <div className="flex items-center justify-between">
-            <Code className="w-8 h-8 text-green-500" />
-            <div className="text-sm font-medium text-gray-600 uppercase tracking-wider">
-              Unique Skills
-            </div>
-          </div>
-          <div className="text-5xl font-extrabold text-green-700 mt-3">
-            {skillAnalytics.length}
-          </div>
-          <p className="text-xs text-gray-400 mt-1">Distinct skills rated/selected</p>
+        <div className="text-3xl font-extrabold text-blue-700 mt-2 transition-transform duration-300">
+          {responses.length}
         </div>
-
-        {/* Avg Rating */}
-        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 transition transform hover:scale-[1.01] duration-300">
-          <div className="flex items-center justify-between">
-            <Star className="w-8 h-8 text-yellow-500" />
-            <div className="text-sm font-medium text-gray-600 uppercase tracking-wider">
-              Overall Avg Rating
-            </div>
-          </div>
-          <div className="text-5xl font-extrabold text-yellow-700 mt-3 flex items-baseline">
-            {avgRating}
-          </div>
-          <p className="text-xs text-gray-400 mt-1">Average proficiency across all skills</p>
-        </div>
+        <p className="text-xs text-gray-700 mt-1">Total responses collected</p>
       </div>
 
+      {/* Unique Skills */}
+      <div className="bg-green-50 rounded-xl shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:bg-green-100 group">
+        <div className="flex items-center justify-between">
+          <Code className="w-6 h-6 text-green-500 transition-transform duration-300 group-hover:scale-110" />
+          <div className="text-xs font-medium text-gray-600 uppercase tracking-wider">
+            Unique Skills
+          </div>
+        </div>
+        <div className="text-3xl font-extrabold text-green-700 mt-2 transition-transform duration-300">
+          {skillAnalytics.length}
+        </div>
+        <p className="text-xs text-gray-700 mt-1">Distinct skills rated/selected</p>
+      </div>
+
+      {/* Avg Rating */}
+      <div className="bg-yellow-50 rounded-xl shadow-xl p-6 transition-all duration-300 hover:shadow-2xl hover:bg-yellow-100 group">
+        <div className="flex items-center justify-between">
+          <Star className="w-6 h-6 text-yellow-500 transition-transform duration-300 group-hover:scale-110" />
+          <div className="text-xs font-medium text-gray-600 uppercase tracking-wider">
+            Overall Avg Rating
+          </div>
+        </div>
+        <div className="text-3xl font-extrabold text-yellow-700 mt-2 transition-transform duration-300">
+          {avgRating}
+        </div>
+        <p className="text-xs text-gray-700 mt-1">Average proficiency across all skills</p>
+      </div>
+    </div>
+
       {/* --- Charts Section --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Bar Chart (Top 5) */}
-        <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6 relative flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+        {/* Bar Chart (Top 5) - Smaller width */}
+        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 relative flex flex-col lg:col-span-3">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="text-2xl font-bold text-gray-800">Top 5 Employee Skills</h3>
+            <h3 className="text-xl font-bold text-gray-800">Top 5 Employee Skills</h3>
             <button
               onClick={() => setIsBarModalOpen(true)}
               title="Open bar chart fullscreen (Top 10)"
               className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
             >
-              <Maximize2 size={20} />
+              <Maximize2 size={18} />
             </button>
           </div>
           <p className="text-sm text-gray-500 mb-4">Count of employees mentioning the skill.</p>
-          <div className="min-h-[350px]">
+          <div className="min-h-[300px] flex items-center justify-center">
             <Bar data={barChartData} options={barChartOptions} />
           </div>
         </div>
 
-        {/* 3D Pie Chart (small) */}
-        <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6 relative flex flex-col">
+        {/* 3D Pie Chart (small) - Larger width */}
+        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6 relative flex flex-col lg:col-span-4">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="text-2xl font-bold text-gray-800">Skill Distribution</h3>
+            <h3 className="text-xl font-bold text-gray-800">Skill Distribution</h3>
             <button
               onClick={() => setIsPieModalOpen(true)}
               title="Open pie chart fullscreen"
               className="p-2 rounded-lg text-indigo-600 hover:bg-indigo-50 transition"
             >
-              <Maximize2 size={20} />
+              <Maximize2 size={18} />
             </button>
           </div>
-          <p className="text-sm text-gray-500 mb-4">Percentage breakdown of all recorded skills (Top 15).</p>
-          <div className="mt-3 flex-1 min-h-[350px]">
+          <p className="text-sm text-gray-500 mb-4">Percentage breakdown of all recorded skills.</p>
+          <div className="mt-3 flex-1 min-h-[300px]">
             <div
               ref={chartRef}
               id="chartdiv"
-              style={{ width: "100%", height: "100%", minHeight: "350px" }}
+              style={{ width: "100%", height: "100%", minHeight: "300px" }}
             />
           </div>
         </div>
@@ -554,14 +566,13 @@ export default function Analytics() {
       {/* --- Skills by Section & Ratings/Top Skills --- */}
       <div className="space-y-8">
         {/* Skills by Section Grid */}
-        <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6">
+        <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6">
           <h3 className="text-2xl font-bold text-gray-800 mb-6">Skills by Domain</h3>
-          {/* Changed lg:grid-cols-8 to lg:grid-cols-4 for two rows */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {skillsBySection.map((s) => {
               const Icon = s.icon;
               return (
-                <div key={s.key} className={`p-4 rounded-xl border border-gray-100 shadow-md ${s.color}`}>
+                <div key={s.key} className={`p-4 rounded-xl border border-gray-100 shadow- ${s.color}`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Icon size={20} />
                     <div className="text-sm font-semibold whitespace-nowrap">{s.title}</div>
@@ -576,7 +587,7 @@ export default function Analytics() {
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Top Skills List (Progress Bars) */}
-          <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6">
+          <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6">
             <h3 className="text-2xl font-bold text-gray-800 mb-6">Top Skill Momentum (Top 5)</h3>
             <div className="space-y-6">
               {top5Skills.length > 0 ? (
@@ -610,7 +621,7 @@ export default function Analytics() {
 
           {/* Skill Ratings List (Stars) */}
           <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">Skill Proficiency Overview</h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-6">Skill Proficiency Overview</h3>
             <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
               {skillAnalytics.length > 0 ? (
                 skillAnalytics.map((skill, index) => (
@@ -652,7 +663,7 @@ export default function Analytics() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm transition-opacity duration-300">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[95vh] relative transform scale-100 transition-transform duration-300">
             <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/50">
-              <h3 className="text-xl font-bold text-gray-800">Full Skills Distribution (Top 15)</h3>
+              <h3 className="text-xl font-bold text-gray-800">Full Skills Distribution</h3>
               <button
                 onClick={() => setIsPieModalOpen(false)}
                 title="Close"
@@ -669,33 +680,33 @@ export default function Analytics() {
       )}
 
       {/* Fullscreen Modal for Bar Chart (Top 10) */}
-{isBarModalOpen && (
-  <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-0 backdrop-blur-sm transition-opacity duration-300">
-    <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl h-screen relative transform scale-100 transition-transform duration-300 mt-4">
-      
-      {/* Modal Header */}
-      <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/50 rounded-t-xl">
-        <h3 className="text-xl font-bold text-gray-800">
-          Top 10 Most Common Skills
-        </h3>
-        <button
-          onClick={() => setIsBarModalOpen(false)}
-          title="Close"
-          className="p-2 rounded-full text-gray-600 hover:bg-gray-200 transition"
-        >
-          <X size={24} />
-        </button>
-      </div>
+      {isBarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 p-0 backdrop-blur-sm transition-opacity duration-300">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl h-screen relative transform scale-100 transition-transform duration-300 mt-4">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/50 rounded-t-xl">
+              <h3 className="text-xl font-bold text-gray-800">
+                Top 10 Most Common Skills
+              </h3>
+              <button
+                onClick={() => setIsBarModalOpen(false)}
+                title="Close"
+                className="p-2 rounded-full text-gray-600 hover:bg-gray-200 transition"
+              >
+                <X size={24} />
+              </button>
+            </div>
 
-      {/* Chart Content */}
-      <div className="p-8 h-[calc(100vh-120px)] flex items-center justify-center">
-        <div className="w-full h-full">
-          <Bar data={barModalData} options={barModalOptions} />
+            {/* Chart Content */}
+            <div className="p-8 h-[calc(100vh-120px)] flex items-center justify-center">
+              <div className="w-full h-full">
+                <Bar data={barModalData} options={barModalOptions} />
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
-  </div>
-)}
-</div>
-);
+  );
 }
