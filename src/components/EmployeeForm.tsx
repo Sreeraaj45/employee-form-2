@@ -253,7 +253,7 @@ export default function EmployeeForm() {
               Employee Skill Mapping Survey
               <Sparkles className="w-8 h-8 animate-spin-slow" />
             </h1>
-            <p className="text-white/80 mt-2 font-medium">Explore and highlight your expertise 🌟</p>
+            <p className="text-white/80 mt-2 font-medium">Explore and highlight your expertise</p>
           </div>
         </header>
 
