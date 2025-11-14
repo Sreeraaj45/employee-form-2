@@ -173,10 +173,22 @@ export default function EmployeeForm() {
         skill_ratings: formData.skillRatings,
         additional_skills: formData.additionalSkills
       });
+
       setFormData({ name: '', employeeId: '', email: '', skillRatings: [], additionalSkills: '' });
       setCurrentStep(0);
       setStatus('success');
-      confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+
+      confetti({
+        particleCount: 120,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+
+      // 🔥 Redirect to Thank You page after confetti
+      setTimeout(() => {
+        window.location.href = "/thankyou";
+      }, 800);
+
     } catch (err: any) {
       console.error(err);
       setStatus('error');
@@ -185,6 +197,7 @@ export default function EmployeeForm() {
       setLoading(false);
       setTimeout(() => setStatus(null), 4000);
     }
+
   };
 
   const StarRating = ({ skill, section }: { skill: string; section: string }) => {
@@ -412,8 +425,8 @@ export default function EmployeeForm() {
               onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
               disabled={currentStep === 0}
               className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${currentStep === 0
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
                 }`}
             >
               Previous

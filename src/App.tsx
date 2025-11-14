@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import EmployeeForm from './components/EmployeeForm';
 import DeveloperDashboard from './components/DeveloperDashboard';
 import Login from './components/Login';
+import ThankYou from './components/ThankYou';
 import { Code2, Users } from 'lucide-react';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'employee' | 'developer' | 'login'>('employee');
+  // const [currentPage, setCurrentPage] = useState<'employee' | 'developer' | 'login'>('employee');
+  const [currentPage, setCurrentPage] = useState<'employee' | 'developer' | 'login' | 'thankyou'>('employee');
   const [pathname, setPathname] = useState(() => window.location.pathname);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userEmail, setUserEmail] = useState('');
@@ -27,6 +29,9 @@ function App() {
       } else {
         setCurrentPage('login');
       }
+    } 
+    else if (p === '/thankyou') {
+      setCurrentPage('thankyou');
     }
   }, []);
 
@@ -41,6 +46,9 @@ function App() {
         } else {
           setCurrentPage('login');
         }
+      } 
+      else if (p === '/thankyou') {
+        setCurrentPage('thankyou');
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -62,9 +70,16 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isAuthenticated]);
 
-  const navigateTo = (page: 'employee' | 'developer') => {
+  const navigateTo = (page: 'employee' | 'developer' | 'thankyou') => {
     setCurrentPage(page);
-    const newPath = page === 'employee' ? '/form' : '/dashboard';
+
+    const newPath =
+      page === 'employee'
+        ? '/form'
+        : page === 'developer'
+        ? '/dashboard'
+        : '/thankyou';
+
     if (window.location.pathname !== newPath) {
       window.history.pushState({}, '', newPath);
       setPathname(newPath);
@@ -90,7 +105,11 @@ function App() {
     setPathname('/form');
   };
 
-  const isDirectPath = pathname === '/form' || pathname === '/dashboard' || pathname === '/login';
+  const isDirectPath =
+    pathname === '/form' ||
+    pathname === '/dashboard' ||
+    pathname === '/login' ||
+    pathname === '/thankyou';
 
   if (currentPage === 'login') {
     return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -140,6 +159,8 @@ function App() {
       {currentPage === 'developer' && (
         <DeveloperDashboard userEmail={userEmail} onLogout={handleLogout} />
       )}
+
+      {currentPage === 'thankyou' && <ThankYou />}
     </div>
   );
 }
