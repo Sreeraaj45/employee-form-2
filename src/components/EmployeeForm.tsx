@@ -23,13 +23,13 @@ const SKILL_SECTIONS = {
     title: 'Programming Skills',
     icon: <Code2 className="w-6 h-6" />,
     color: 'from-sky-400 to-emerald-400',
-    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark']
+    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark', "SQL", "NoSQL"]
   },
   dataAnalytics: {
     title: 'Data Analytics',
     icon: <BarChart3 className="w-6 h-6" />,
     color: 'from-amber-400 to-pink-400',
-    skills: ['Power BI / Tableau', 'Visualization Libraries', 'SQL', 'NoSQL']
+    skills: ['Power BI / Tableau', 'Visualization Libraries']
   },
   dataScience: {
     title: 'Data Science',
@@ -38,8 +38,6 @@ const SKILL_SECTIONS = {
     skills: [
       'Data Modelling (ML Algorithms)',
       'Statistics',
-      'SQL',
-      'NoSQL',
       'Dashboards (Power BI, Grafana)'
     ]
   },
@@ -55,7 +53,6 @@ const SKILL_SECTIONS = {
       'Kubernetes',
       'PySpark',
       'Docker',
-      'NoSQL',
       'flyte'
     ]
   },

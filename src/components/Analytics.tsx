@@ -51,13 +51,13 @@ const RATING_LABELS: Record<number, string> = {
 const SKILL_SECTIONS = {
   programming: {
     title: "Programming Skills",
-    skills: ["Python", "C++", "Java", "JavaScript", "C", "PySpark"],
+    skills: ["Python", "C++", "Java", "JavaScript", "C", "PySpark", "SQL", "NoSQL"],
     icon: Code,
     color: "text-indigo-600 bg-indigo-100",
   },
   dataAnalytics: {
     title: "Data Analytics",
-    skills: ["Power BI / Tableau", "Visualization Libraries", "SQL", "NoSQL"],
+    skills: ["Power BI / Tableau", "Visualization Libraries"],
     icon: TrendingUp,
     color: "text-green-600 bg-green-100",
   },
@@ -66,8 +66,6 @@ const SKILL_SECTIONS = {
     skills: [
       "Data Modelling (ML Algorithms)",
       "Statistics",
-      "SQL",
-      "NoSQL",
       "Dashboards (Power BI, Grafana)",
     ],
     icon: Star,
@@ -83,7 +81,6 @@ const SKILL_SECTIONS = {
       "Kubernetes",
       "PySpark",
       "Docker",
-      "NoSQL",
       "flyte",
     ],
     icon: Zap,

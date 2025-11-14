@@ -35,12 +35,12 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
   programming: {
     title: 'Programming Skills',
     color: 'from-sky-500 to-emerald-500',
-    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark']
+    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark', "SQL", "NoSQL"]
   },
   dataAnalytics: {
     title: 'Data Analytics',
     color: 'from-amber-500 to-pink-500',
-    skills: ['Power BI / Tableau', 'Visualization Libraries', 'SQL', 'NoSQL']
+    skills: ['Power BI / Tableau', 'Visualization Libraries']
   },
   dataScience: {
     title: 'Data Science',
@@ -48,8 +48,6 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
     skills: [
       'Data Modelling (ML Algorithms)',
       'Statistics',
-      'SQL',
-      'NoSQL',
       'Dashboards (Power BI, Grafana)'
     ]
   },
@@ -64,7 +62,6 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
       'Kubernetes',
       'PySpark',
       'Docker',
-      'NoSQL',
       'flyte'
     ]
   },
