@@ -3,7 +3,7 @@ import logo from "/src/assets/logo.png"; // ✅ production-safe import
 
 export default function ThankYou() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-8 relative overflow-hidden">
 
       {/* Soft Background Blobs */}
       <div className="absolute -top-24 -left-20 w-72 h-72 bg-pink-200 opacity-30 rounded-full blur-3xl animate-pulse"></div>
@@ -31,19 +31,13 @@ export default function ThankYou() {
         </header>
 
         {/* Main Card */}
-        <div className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-xl p-10 border border-slate-100 flex flex-col items-center">
+        <div className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-xl p-7 border border-slate-100 flex flex-col items-center">
 
           <CheckCircle className="w-20 h-20 text-emerald-500 mb-4" />
 
           <h2 className="text-3xl font-bold text-slate-800 mb-3">
-            Submission Complete 🎉
+            Submission Completed
           </h2>
-
-          <p className="text-slate-600 text-lg mb-6">
-            Thanks for filling the form!  
-            If you’re in the mood to level up your skills, just hit the button below — let’s keep growing!
-          </p>
-
           {/* DigiVidya Button */}
           <a
             href="https://www.digividya.ielektron.com/signup"
@@ -52,7 +46,7 @@ export default function ThankYou() {
             className="
               relative 
               inline-block 
-              px-6 py-3 
+              px-6 py-3 mt-3 
               font-semibold 
               rounded-xl 
               border-2 
