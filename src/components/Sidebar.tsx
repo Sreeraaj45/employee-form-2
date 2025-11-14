@@ -1,4 +1,5 @@
 import { List, BarChart3, User, LogOut, ChevronRight } from 'lucide-react';
+import logo from "../assets/logo.png";
 
 interface SidebarProps {
   activeTab: 'builder' | 'responses' | 'analytics';
@@ -9,19 +10,19 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab, onTabChange, userEmail, onLogout }: SidebarProps) {
   const tabs = [
-    { 
-      id: 'responses' as const, 
-      label: 'Responses', 
+    {
+      id: 'responses' as const,
+      label: 'Responses',
       icon: List,
       gradient: 'from-blue-500 to-cyan-500'
     },
-    { 
-      id: 'analytics' as const, 
-      label: 'Analytics', 
+    {
+      id: 'analytics' as const,
+      label: 'Analytics',
       icon: BarChart3,
       gradient: 'from-purple-500 to-pink-500'
     },
-    
+
   ];
 
   return (
@@ -29,7 +30,7 @@ export default function Sidebar({ activeTab, onTabChange, userEmail, onLogout }:
       {/* Logo & Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <img src="src/assets/logo.png" alt="Logo" className="w-12 h-12 rounded" />
+          <img src={logo} alt="Logo" className="w-12 h-12 rounded" />
           <div>
             <h1 className="text-base font-bold text-gray-900">Skill Flow</h1>
             <p className="text-xs text-gray-500">Employee skills</p>
@@ -43,41 +44,36 @@ export default function Sidebar({ activeTab, onTabChange, userEmail, onLogout }:
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
-            
+
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`w-full group relative transition-all duration-200 ${
-                  isActive ? 'transform scale-[1.01]' : ''
-                }`}
+                className={`w-full group relative transition-all duration-200 ${isActive ? 'transform scale-[1.01]' : ''
+                  }`}
               >
-                <div className={`relative flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                  isActive
+                <div className={`relative flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 ${isActive
                     ? 'bg-blue-50 border border-blue-200 shadow-sm'
                     : 'hover:bg-gray-50 border border-transparent'
-                }`}>
-                  {/* Icon */}
-                  <div className={`p-1.5 rounded-md bg-gradient-to-br ${tab.gradient} shadow-sm flex-shrink-0 ${
-                    isActive ? 'ring-1 ring-blue-200' : ''
                   }`}>
+                  {/* Icon */}
+                  <div className={`p-1.5 rounded-md bg-gradient-to-br ${tab.gradient} shadow-sm flex-shrink-0 ${isActive ? 'ring-1 ring-blue-200' : ''
+                    }`}>
                     <Icon className="w-4 h-4 text-white" />
                   </div>
-                  
+
                   <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className={`font-medium text-sm transition-colors ${
-                        isActive ? 'text-blue-700' : 'text-gray-700 group-hover:text-gray-900'
-                      }`}>
+                      <span className={`font-medium text-sm transition-colors ${isActive ? 'text-blue-700' : 'text-gray-700 group-hover:text-gray-900'
+                        }`}>
                         {tab.label}
                       </span>
-                      <ChevronRight 
-                        size={14} 
-                        className={`transition-all duration-200 ${
-                          isActive 
-                            ? 'text-blue-500 transform translate-x-0' 
+                      <ChevronRight
+                        size={14}
+                        className={`transition-all duration-200 ${isActive
+                            ? 'text-blue-500 transform translate-x-0'
                             : 'text-gray-400 group-hover:text-gray-600 transform -translate-x-0.5 group-hover:translate-x-0'
-                        }`}
+                          }`}
                       />
                     </div>
                   </div>
@@ -98,7 +94,7 @@ export default function Sidebar({ activeTab, onTabChange, userEmail, onLogout }:
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-800 truncate">
               {userEmail.split('@')[0]}
@@ -120,9 +116,9 @@ export default function Sidebar({ activeTab, onTabChange, userEmail, onLogout }:
             </div>
             <span className="font-semibold">Sign Out</span>
           </div>
-          <ChevronRight 
-            size={14} 
-            className="text-gray-400 group-hover:text-red-400 transition-colors duration-300 transform group-hover:translate-x-0.5" 
+          <ChevronRight
+            size={14}
+            className="text-gray-400 group-hover:text-red-400 transition-colors duration-300 transform group-hover:translate-x-0.5"
           />
         </button>
       </div>
