@@ -236,32 +236,43 @@ export default function EmployeeForm() {
   const progress = ((currentStep + 1) / totalSteps) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-12 relative overflow-hidden">
-      <div className="absolute -top-24 -left-20 w-72 h-72 bg-pink-200 opacity-30 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 opacity-30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-6 md:py-12 relative overflow-hidden">
 
-      <div className="max-w-5xl mx-auto px-10 relative z-10">
-        <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-xl shadow-xl p-10 text-white mb-6 flex items-center justify-between">
+      {/* Background Blobs */}
+      <div className="absolute -top-24 -left-20 w-52 h-52 md:w-72 md:h-72 bg-pink-200 opacity-30 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 right-0 w-72 h-72 md:w-96 md:h-96 bg-sky-200 opacity-30 rounded-full blur-3xl delay-1000"></div>
+
+      <div className="max-w-5xl mx-auto px-4 md:px-10 relative z-10">
+
+        {/* HEADER */}
+        <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-xl shadow-xl p-5 md:p-10 text-white mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
           <img
             src={logo}
             alt="Logo"
-            className="w-20 h-20 rounded-full shadow-lg border-2 border-white/60 hover:scale-110 transition-transform duration-300"
+            className="w-14 h-14 md:w-20 md:h-20 rounded-full shadow-lg border-2 border-white/60"
           />
-          <div className="text-center flex flex-col items-center flex-1">
-            <h1 className="text-4xl font-extrabold flex justify-center items-center gap-3">
-              <Sparkles className="w-8 h-8 animate-spin-slow" />
+
+          <div className="text-center md:flex-1 flex flex-col items-center">
+            <h1 className="text-2xl md:text-4xl font-extrabold flex justify-center items-center gap-3">
+              <Sparkles className="w-6 h-6 md:w-8 md:h-8 animate-spin-slow" />
               Employee Skill Mapping Survey
-              <Sparkles className="w-8 h-8 animate-spin-slow" />
+              <Sparkles className="w-6 h-6 md:w-8 md:h-8 animate-spin-slow" />
             </h1>
-            <p className="text-white/80 mt-2 font-medium">Explore and highlight your expertise</p>
+            <p className="text-white/80 mt-1 md:mt-2 text-sm md:text-base font-medium">
+              Explore and highlight your expertise
+            </p>
           </div>
         </header>
 
-        {/* Content */}
-        <form onSubmit={e => e.preventDefault()} className="space-y-8">
-          <section className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg p-8 border border-slate-100">
-            <h2 className="text-2xl font-bold mb-6 text-slate-800">Personal Info</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* FORM */}
+        <form onSubmit={e => e.preventDefault()} className="space-y-6 md:space-y-8">
+
+          {/* PERSONAL INFO */}
+          <section className="bg-white/70 backdrop-blur-lg rounded-xl shadow-lg p-4 md:p-8 border border-slate-100">
+            <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-slate-800">Personal Info</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <input
                 type="text"
                 placeholder="Full Name"
@@ -297,118 +308,114 @@ export default function EmployeeForm() {
             </div>
           </section>
 
-          {/* Progress */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-semibold text-slate-700 min-w-[90px] text-right">
-              Step {currentStep + 1} of {totalSteps}
+          {/* PROGRESS */}
+          <div className="flex items-center gap-3 md:gap-4">
+            <span className="text-xs md:text-sm font-semibold text-slate-700 min-w-[70px] md:min-w-[90px] text-right">
+              Step {currentStep + 1} / {totalSteps}
             </span>
-            <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden relative">
+            <div className="flex-1 h-2.5 md:h-3 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className={`h-full bg-gradient-to-r ${currentColor} transition-[width] duration-700 ease-in-out`}
+                className={`h-full bg-gradient-to-r ${currentColor} transition-[width] duration-700`}
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
           </div>
 
-          {/* Skill/Additional/Review Sections */}
+          {/* MAIN SECTIONS (Skills / Additional / Review) */}
+          {/* —————————————— SKILLS —————————————— */}
           {currentStep < sectionKeys.length ? (
-            // Skill sections
-            <div key={currentSectionKey} className="rounded-xl overflow-hidden shadow-xl bg-white">
-              <div
-                className={`w-full flex justify-between items-center px-6 py-5 bg-gradient-to-r ${currentColor} text-white font-semibold text-lg`}
-              >
-                <div className="flex items-center gap-3">
-                  {currentSection.icon}
-                  {currentSection.title}
-                </div>
+            <div className="rounded-xl overflow-hidden shadow-xl bg-white">
+              <div className={`px-4 md:px-6 py-4 md:py-5 bg-gradient-to-r ${currentColor} text-white text-lg font-semibold flex gap-2 items-center`}>
+                {currentSection.icon}
+                {currentSection.title}
               </div>
-              <div className="p-6 space-y-5 bg-white">
+
+              <div className="p-4 md:p-6 space-y-4 md:space-y-5">
                 {currentSection.skills.map(skill => (
-                  <div
-                    key={skill}
-                    className="flex justify-between items-center p-4 bg-slate-50 rounded-xl hover:bg-sky-50 transition"
-                  >
-                    <p className="font-medium text-slate-700">{skill}</p>
-                    <StarRating skill={skill} section={currentSectionKey} />
+                  <div key={skill} className="flex justify-between items-center p-3 md:p-4 bg-slate-50 rounded-xl">
+                    <p className="font-medium text-slate-700 text-sm md:text-base">{skill}</p>
+
+                    <div className="scale-90 md:scale-100">
+                      <StarRating skill={skill} section={currentSectionKey} />
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : currentStep === sectionKeys.length ? (
-            // Additional Skills
-            <section className="bg-white/70 backdrop-blur-lg rounded-2xl shadow-lg p-8 border border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800 mb-4">Additional Skills</h2>
+
+            /* —————————————— ADDITIONAL SKILLS —————————————— */
+            <section className="bg-white rounded-2xl p-4 md:p-8 shadow-lg border border-slate-100">
+              <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-3 md:mb-4">Additional Skills</h2>
+
               <textarea
                 rows={4}
                 placeholder="Tell us about other awesome things you can do..."
                 value={formData.additionalSkills}
                 onChange={e => setFormData({ ...formData, additionalSkills: e.target.value })}
-                className="w-full p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none resize-none"
+                className="w-full p-3 border-2 border-slate-200 rounded-xl resize-none focus:ring-2 focus:ring-sky-400 outline-none"
               />
             </section>
           ) : (
-            // Review & Submit (enhanced with star visuals)
-            <section className="bg-white rounded-2xl shadow-lg p-8 border border-slate-100">
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-slate-800">
-                <Eye className="w-6 h-6 text-indigo-500" /> Review Your Ratings
+
+            /* —————————————— REVIEW PAGE —————————————— */
+            <section className="bg-white rounded-2xl p-4 md:p-8 shadow-lg border border-slate-100">
+              <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2 mb-4 text-slate-800">
+                <Eye className="w-5 h-5 md:w-6 md:h-6 text-indigo-500" /> Review Your Ratings
               </h2>
 
-              <div className="space-y-6">
-                <div className="bg-slate-50 p-4 rounded-lg">
+              <div className="space-y-5">
+
+                {/* Personal Info Review */}
+                <div className="bg-slate-50 p-4 rounded-lg text-sm md:text-base">
                   <h3 className="font-semibold text-slate-700 mb-2">Personal Info</h3>
                   <p><b>Name:</b> {formData.name}</p>
                   <p><b>Employee ID:</b> {formData.employeeId}</p>
                   <p><b>Email:</b> {formData.email}</p>
                 </div>
 
+                {/* Skill Reviews */}
                 {sectionKeys.map(key => {
                   const section = SKILL_SECTIONS[key];
-                  const ratedSkills = formData.skillRatings.filter(sr => sr.section === key);
-                  if (ratedSkills.length === 0) return null;
+                  const rated = formData.skillRatings.filter(sr => sr.section === key);
+                  if (rated.length === 0) return null;
+
                   return (
                     <div key={key} className="border-t pt-4">
-                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm md:text-base">
                         {section.icon} {section.title}
                       </h3>
 
-                      <ul className="mt-3 space-y-3">
-                        {ratedSkills.map(sr => (
-                          <li
-                            key={sr.skill}
-                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-50 p-3 rounded-lg shadow-sm"
-                          >
-                            <span className="font-medium text-slate-700">{sr.skill}</span>
+                      {rated.map(sr => (
+                        <div key={sr.skill} className="bg-slate-50 p-3 mt-2 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                          <span className="font-medium text-slate-700 text-sm md:text-base">{sr.skill}</span>
 
-                            {/* Stars Display - read-only visual of 5 stars */}
-                            <div className="flex items-center gap-3 mt-2 sm:mt-0">
-                              <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map(star => (
-                                  <svg
-                                    key={star}
-                                    className={`w-5 h-5 ${star <= sr.rating ? 'fill-yellow-400 text-yellow-400' : 'fill-gray-200'
-                                      }`}
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                  </svg>
-                                ))}
-                              </div>
+                          <div className="flex items-center gap-2 mt-1 sm:mt-0">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <svg
+                                key={star}
+                                className={`w-4 h-4 md:w-5 md:h-5 ${star <= sr.rating ? "fill-yellow-400" : "fill-gray-200"
+                                  }`}
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                            ))}
 
-                              <span className="text-sm text-slate-600 font-medium">
-                                {RATING_LABELS[sr.rating as keyof typeof RATING_LABELS]}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
+                            <span className="text-xs md:text-sm text-slate-600 font-medium">
+                              {RATING_LABELS[sr.rating]}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   );
                 })}
 
                 {formData.additionalSkills && (
                   <div className="border-t pt-4">
-                    <h3 className="font-bold text-slate-800">Additional Skills</h3>
-                    <p className="text-slate-700 whitespace-pre-line mt-1">
+                    <h3 className="font-bold text-slate-800 text-sm md:text-base">Additional Skills</h3>
+                    <p className="text-slate-700 mt-1 whitespace-pre-line text-sm md:text-base">
                       {formData.additionalSkills}
                     </p>
                   </div>
@@ -417,15 +424,16 @@ export default function EmployeeForm() {
             </section>
           )}
 
-          {/* Navigation */}
-          <div className="flex justify-between items-center">
+          {/* NAVIGATION BUTTONS */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-3 mt-4">
+
             <button
               type="button"
               onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
               disabled={currentStep === 0}
-              className={`px-6 py-3 rounded-xl font-semibold shadow-md transition-transform hover:scale-105 ${currentStep === 0
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'
+              className={`w-full md:w-auto px-6 py-3 rounded-xl font-semibold shadow-md ${currentStep === 0
+                ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-slate-400 to-slate-600 text-white"
                 }`}
             >
               Previous
@@ -434,8 +442,8 @@ export default function EmployeeForm() {
             {currentStep < totalSteps - 1 ? (
               <button
                 type="button"
-                onClick={() => setCurrentStep(prev => Math.min(totalSteps - 1, prev + 1))}
-                className={`px-6 py-3 rounded-xl font-semibold text-white shadow-md bg-gradient-to-r ${currentColor} transition-transform hover:scale-105`}
+                onClick={() => setCurrentStep(prev => prev + 1)}
+                className={`w-full md:w-auto px-6 py-3 rounded-xl font-semibold text-white bg-gradient-to-r ${currentColor}`}
               >
                 Next
               </button>
@@ -444,36 +452,42 @@ export default function EmployeeForm() {
                 type="button"
                 disabled={loading}
                 onClick={handleSubmit}
-                className="px-8 py-3 bg-gradient-to-r from-sky-400 to-indigo-400 text-white font-bold text-lg rounded-2xl shadow-lg hover:from-sky-500 hover:to-indigo-500 transition-transform hover:scale-[1.02] disabled:opacity-60"
+                className="w-full md:w-auto px-8 py-3 bg-gradient-to-r from-sky-400 to-indigo-400 text-white font-bold text-lg rounded-2xl shadow-lg disabled:opacity-60"
               >
-                {loading ? 'Submitting...' : 'Submit Form'}
+                {loading ? "Submitting..." : "Submit Form"}
               </button>
             )}
           </div>
         </form>
 
-        {/* Toasts */}
+        {/* TOASTS */}
         {status === 'success' && (
-          <div className="fixed bottom-6 right-6 bg-emerald-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce-in">
-            <CheckCircle /> <span>Form submitted successfully 🎉</span>
+          <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 bg-emerald-500 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 animate-bounce-in">
+            <CheckCircle /> Form submitted successfully 🎉
           </div>
         )}
+
         {status === 'error' && (
-          <div className="fixed bottom-6 right-6 bg-rose-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce-in max-w-sm">
-            <AlertCircle className="flex-shrink-0" /> <span>{errorMessage || 'Oops! Something went wrong'}</span>
+          <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 bg-rose-500 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 animate-bounce-in max-w-xs text-sm">
+            <AlertCircle /> {errorMessage}
           </div>
         )}
       </div>
 
+      {/* ANIMATIONS */}
       <style>{`
-        @keyframes bounce-in {
-          from { transform: translateY(40px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-bounce-in { animation: bounce-in 0.5s ease-out; }
-        .animate-spin-slow { animation: spin 8s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      @keyframes bounce-in {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      .animate-bounce-in { animation: bounce-in .5s ease-out; }
+      .animate-spin-slow { animation: spin 8s linear infinite; }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
     </div>
   );
+
 }
