@@ -60,7 +60,6 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
       'Azure',
       'Apache Airflow',
       'Kubernetes',
-      'PySpark',
       'Docker',
       'flyte'
     ]
@@ -98,7 +97,7 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
   devops: {
     title: 'DevOps',
     color: 'from-gray-500 to-slate-600',
-    skills: ['Jenkins', 'CI/CD', 'Kubernetes', 'Docker']
+    skills: ['Jenkins', 'CI/CD']
   }
 };
 

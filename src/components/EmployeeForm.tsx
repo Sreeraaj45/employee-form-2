@@ -51,7 +51,6 @@ const SKILL_SECTIONS = {
       'Azure',
       'Apache Airflow',
       'Kubernetes',
-      'PySpark',
       'Docker',
       'flyte'
     ]
@@ -93,7 +92,7 @@ const SKILL_SECTIONS = {
     title: 'DevOps',
     icon: <Settings className="w-6 h-6" />,
     color: 'from-gray-400 to-slate-500',
-    skills: ['Jenkins', 'CI/CD', 'Kubernetes', 'Docker']
+    skills: ['Jenkins', 'CI/CD']
   }
 };
 
