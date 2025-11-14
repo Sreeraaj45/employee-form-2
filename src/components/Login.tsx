@@ -152,14 +152,14 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             {/* Demo Credentials Section - Reduced spacing */}
             <div className="mt-4">
               <div className="text-center">
-                <button
+                {/* <button
                   onClick={fillDemoCredentials}
                   disabled={loading}
                   className="bg-gradient-to-r from-gray-500 to-gray-900 hover:from-blue-600 hover:to-pink-600 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 group mx-auto text-sm"
                 >
                   <Sparkles size={14} className="group-hover:scale-110 transition-transform duration-200" />
                   Use Demo Email
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
