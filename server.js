@@ -4,9 +4,11 @@ import mongodb from 'mongodb';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { MongoClient, ObjectId } from 'mongodb';
 
 dotenv.config();
+
+// Fix: Use default import for MongoDB
+const { MongoClient, ObjectId } = mongodb;
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -21,7 +23,7 @@ app.use(express.json());
 // Serve static files from React build (dist folder)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// MongoDB Connection with TLS fixes
+// MongoDB Connection - Simplified for Azure
 const connectionString = process.env.VITE_MONGODB_URI;
 let db;
 let client;
@@ -35,21 +37,10 @@ const initializeDatabase = async () => {
       return false;
     }
 
-    // Enhanced connection options for Azure + MongoDB Atlas
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
-      retryWrites: true,
-      tls: true,
-      tlsAllowInvalidCertificates: false,
-      tlsAllowInvalidHostnames: false,
-      maxPoolSize: 10,
-      minPoolSize: 1
-    };
+    console.log('📊 Connection string present, attempting connection...');
 
-    client = new MongoClient(connectionString, options);
+    // Simple connection without complex options
+    client = new MongoClient(connectionString);
     
     await client.connect();
     console.log('✅ MongoDB client connected');
@@ -69,31 +60,8 @@ const initializeDatabase = async () => {
     return true;
   } catch (error) {
     console.error('❌ Error initializing database:', error.message);
-    console.error('🔍 Error details:', {
-      name: error.name,
-      code: error.code
-    });
-    
-    // Try alternative connection without strict TLS
-    try {
-      console.log('🔄 Trying alternative connection method...');
-      const fallbackClient = new MongoClient(connectionString, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-        tls: true,
-        tlsAllowInvalidCertificates: true, // Less strict for testing
-        tlsAllowInvalidHostnames: true
-      });
-      
-      await fallbackClient.connect();
-      db = fallbackClient.db(process.env.VITE_MONGODB_DATABASE || 'employee_skills');
-      await db.command({ ping: 1 });
-      console.log('✅ Connected with fallback method');
-      return true;
-    } catch (fallbackError) {
-      console.error('❌ Fallback connection also failed:', fallbackError.message);
-      return false;
-    }
+    console.error('🔍 Full error:', error);
+    return false;
   }
 };
 
@@ -403,11 +371,33 @@ app.put('/api/schemas/:id', requireDB, async (req, res) => {
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
-// ========== SERVER STARTUP ==========git rm README.md
-app.listen(port, async () => {
-  await initializeDatabase();
-  console.log(`🚀 Full-stack server running on port ${port}`);
-  console.log(`📁 Serving React app from: ${path.join(__dirname, 'dist')}`);
-  console.log(`🔗 API available at: http://localhost:${port}/api`);
-  console.log(`🌐 Frontend available at: http://localhost:${port}`);
-});
+// ========== SERVER STARTUP ==========
+const startServer = async () => {
+  try {
+    console.log('🚀 Starting server...');
+    
+    // Initialize database but don't block server startup
+    initializeDatabase().then(connected => {
+      if (connected) {
+        console.log('✅ Database connection established');
+      } else {
+        console.log('⚠️  Database connection failed - API will return errors');
+      }
+    });
+
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`🚀 Full-stack server running on port ${port}`);
+      console.log(`📁 Serving React app from: ${path.join(__dirname, 'dist')}`);
+      console.log(`🔗 API available at: http://localhost:${port}/api`);
+      console.log(`🌐 Frontend available at: http://localhost:${port}`);
+      console.log(`💾 Database status: ${db ? 'Connected' : 'Connecting...'}`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
