@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "server": "node server.js",
     "dev:all": "npm run server & npm run dev",
-    "start": "npm start"
+    "start": "node server.js"
   },
   "dependencies": {
     "@amcharts/amcharts4": "^4.10.40",
