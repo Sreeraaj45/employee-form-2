@@ -247,11 +247,14 @@ export default function EmployeeForm() {
         {/* HEADER */}
         <header className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 rounded-xl shadow-xl p-5 md:p-10 text-white mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-          <img
-            src={logo}
-            alt="Logo"
-            className="w-14 h-14 md:w-20 md:h-20 rounded-full shadow-lg border-2 border-white/60"
-          />
+          {/* MOBILE CENTER — DESKTOP LEFT */}
+          <div className="flex justify-center md:justify-start w-full md:w-auto">
+            <img
+              src={logo}
+              alt="Logo"
+              className="w-14 h-14 md:w-20 md:h-20 rounded-full shadow-lg border-2 border-white/60"
+            />
+          </div>
 
           <div className="text-center md:flex-1 flex flex-col items-center">
             <h1 className="text-2xl md:text-4xl font-extrabold flex justify-center items-center gap-3">
