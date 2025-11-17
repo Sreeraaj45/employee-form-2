@@ -7,16 +7,9 @@ import {
   Loader,
   RefreshCw,
   Download,
-  SlidersHorizontal,
   Columns,
-  Star,
-  GripVertical, // Better drag handle icon
-  Filter, // Filter icon for search input
-  ChevronsUpDown, // For dropdowns
-  EyeOff,
-  CheckCircle,
-  AlertCircle,
-  Search
+  Search,
+  AlertCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { api } from '../lib/api'; // Assuming this is defined
@@ -35,7 +28,7 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
   programming: {
     title: 'Programming Skills',
     color: 'from-sky-500 to-emerald-500',
-    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark', "SQL", "NoSQL"]
+    skills: ['Python', 'C++', 'Java', 'Rust','JavaScript', 'C', 'PySpark', "SQL", "NoSQL"]
   },
   dataAnalytics: {
     title: 'Data Analytics',
@@ -47,7 +40,7 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
     color: 'from-indigo-500 to-purple-500',
     skills: [
       'Data Modelling (ML Algorithms)',
-      'Statistics',
+      'Statistics (Fundamental statistical concepts)',
       'Dashboards (Power BI, Grafana)'
     ]
   },
@@ -96,8 +89,13 @@ const SKILL_SECTIONS: Record<string, { title: string; color: string; skills: str
   },
   devops: {
     title: 'DevOps',
-    color: 'from-gray-500 to-slate-600',
+    color: 'from-slate-500 to-indigo-500',
     skills: ['Jenkins', 'CI/CD']
+  },
+  ADAS: {
+    title: 'ADAS',
+    skills: ['Camera calibration/processing', 'LiDAR (3D)', 'Sensor fusion'],
+    color: 'from-rose-500 to-orange-500',
   }
 };
 
@@ -111,7 +109,7 @@ interface EmployeeResponse {
   selected_skills: string[]; // not used for rendering but kept for data integrity
   skill_ratings: Array<{ skill: string; rating: number }>;
   additional_skills: string;
-  timestamp: string;
+  timestamp?: string;
 }
 
 // --- Main Component ---
@@ -131,7 +129,12 @@ export default function Responses() {
   // --- UI/Filter State ---
   const [searchTerm, setSearchTerm] = useState('');
   const [showColumnsDropdown, setShowColumnsDropdown] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+
+  // --- Skill Filter State ---
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [selectedRatings, setSelectedRatings] = useState<number[]>([]);
+  const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const filterPopupRef = useRef<HTMLDivElement>(null);
 
   // --- Column/Order State (persisted via local storage/API in production) ---
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
@@ -142,6 +145,8 @@ export default function Responses() {
   const dragSubSkill = useRef<{ section: string; skill: string } | null>(null);
   const columnsDropdownRef = useRef<HTMLDivElement>(null);
 
+  // --- Filters
+  
   // --- Initial Setup ---
   const initialHeaderOrder = useMemo(() => {
     const keys: string[] = ['number', 'name', 'employee_id', 'email'];
@@ -174,11 +179,14 @@ export default function Responses() {
     loadResponses();
   }, [initialHeaderOrder]);
 
-  // Close columns dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (columnsDropdownRef.current && !columnsDropdownRef.current.contains(event.target as Node)) {
         setShowColumnsDropdown(false);
+      }
+      if (filterPopupRef.current && !filterPopupRef.current.contains(event.target as Node)) {
+        setShowFilterPopup(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -261,29 +269,73 @@ export default function Responses() {
     setEditData({ ...editData, skill_ratings: updatedRatings });
   };
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleString('en-US', {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
 
   // --- Filtering & UI Helpers ---
+  // Combined filtering: search + skill/rating filter
   const filteredResponses = useMemo(() => {
+    let filtered = responses;
+    
+    // Apply skill and rating filter first if active
+    if (selectedSkill && selectedSkill.trim() !== '' && selectedRatings.length > 0) {
+      const ratingsSet = new Set(selectedRatings);
+      filtered = filtered.filter(employee => {
+        if (!employee.skill_ratings || !Array.isArray(employee.skill_ratings)) {
+          return false;
+        }
+        for (let i = 0; i < employee.skill_ratings.length; i++) {
+          const sr = employee.skill_ratings[i];
+          if (sr && sr.skill === selectedSkill) {
+            return ratingsSet.has(sr.rating);
+          }
+        }
+        return false;
+      });
+    }
+    
+    // Then apply search filter
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return responses;
-    return responses.filter(r =>
-      r.name.toLowerCase().includes(q) ||
-      r.employee_id.toLowerCase().includes(q) ||
-      r.email.toLowerCase().includes(q)
-    );
-  }, [responses, searchTerm]);
+    if (q) {
+      filtered = filtered.filter(r =>
+        r.name.toLowerCase().includes(q) ||
+        r.employee_id.toLowerCase().includes(q) ||
+        r.email.toLowerCase().includes(q)
+      );
+    }
+    
+    return filtered;
+  }, [responses, searchTerm, selectedSkill, selectedRatings]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearchTerm('');
-  };
+  }, []);
+
+  const clearSkillFilters = useCallback(() => {
+    setSelectedSkill(null);
+    setSelectedRatings([]);
+    setShowFilterPopup(false);
+  }, []);
+
+  const handleSkillHeaderClick = useCallback((skill: string) => {
+    if (selectedSkill === skill) {
+      // If clicking the same skill, toggle the popup
+      setShowFilterPopup(prev => !prev);
+    } else {
+      // If clicking a different skill, switch to it and show popup
+      setSelectedSkill(skill);
+      setSelectedRatings([]);
+      setShowFilterPopup(true);
+    }
+  }, [selectedSkill]);
 
   // Toggle column visibility. section header toggles all its subskills
   const toggleColumn = (key: string) => {
@@ -304,7 +356,6 @@ export default function Responses() {
           const sectionKey = sectionEntry[0];
           const skills: string[] = sectionEntry[1].skills;
           next[key] = newVal;
-          const allOn = skills.every(s => !next[s] || next[s]);
           const allOff = skills.every(s => !next[s] || !next[s]);
 
           if (newVal) {
@@ -389,8 +440,9 @@ export default function Responses() {
     dragSubSkill.current = null;
   };
 
-  // --- Excel Export (patched) ---
+  // --- Excel Export ---
   const downloadExcel = () => {
+    // Standard view export logic
     // Build visible keys in order based on headerOrder & subOrder
     const visibleKeysOrdered: string[] = [];
     headerOrder.forEach(h => {
@@ -575,18 +627,31 @@ export default function Responses() {
 
   // --- Render Table ---
   return (
-    <div className="h-screen flex flex-col p-2 bg-slate-50">
+    <div className="h-screen flex flex-col p-2 bg-slate-50" role="main">
+
+      {/* Screen reader announcements for filter changes */}
+      <div 
+        role="status" 
+        aria-live="polite" 
+        aria-atomic="true" 
+        className="sr-only"
+      >
+        {selectedSkill && selectedRatings.length > 0 && (
+          `Showing ${filteredResponses.length} of ${responses.length} employees with ${selectedSkill} rated ${selectedRatings.sort((a, b) => a - b).join(', ')}`
+        )}
+      </div>
 
       {/* Header + controls */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-4 bg-white rounded-l shadow-md border border-slate-100">
         <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold text-gray-800">
+          <h1 className="text-xl font-bold text-gray-800">
             Total Responses: <span className="text-indigo-600">{responses.length}</span>
-          </h2>
+          </h1>
           <button
             onClick={loadResponses}
-            className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium"
+            className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             title="Refresh"
+            aria-label="Refresh employee responses"
           >
             <RefreshCw size={16} />
             Refresh
@@ -641,15 +706,17 @@ export default function Responses() {
                   <strong className="text-slate-800">Column Visibility</strong>
                   <button
                     onClick={() => {
-                      const allOn = Object.values(visibleColumns).filter(v => typeof v === 'boolean' && !v).length === 0;
-                      const next: Record<string, boolean> = {};
-                      Object.keys(visibleColumns).forEach(k => (next[k] = !allOn));
-                      setVisibleColumns(next);
-                    }}
-                    className="text-xs text-indigo-600 hover:text-indigo-800"
-                  >
-                    Toggle all
-                  </button>
+                    const hasAnyHidden = Object.values(visibleColumns).filter(v => typeof v === 'boolean' && !v).length > 0;
+                    const next: Record<string, boolean> = {};
+                    Object.keys(visibleColumns).forEach(k => (next[k] = hasAnyHidden));
+                    setVisibleColumns(next);
+                  }}
+                  className="relative inline-flex items-center justify-center px-3 py-2 border-2 border-indigo-500 text-indigo-600 hover:bg-indigo-500 hover:text-white font-medium rounded-lg transition-all duration-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2"
+                >
+                  <span className="flex text-xs items-center gap-2">
+                    Toggle All
+                  </span>
+                </button>
                 </div>
 
                 <div className="max-h-80 overflow-y-auto space-y-2">
@@ -720,15 +787,90 @@ export default function Responses() {
             className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition shadow-md text-sm font-medium"
             title="Export visible rows to XLSX (Submitted & Actions excluded)"
           >
-            <Download size={16} /> Export
+            <Download size={16} /> 
+            Export
           </button>
         </div>
       </div>
 
+      {/* Floating Filter Popup */}
+      {showFilterPopup && selectedSkill && (
+        <div 
+          ref={filterPopupRef}
+          className="fixed top-32 right-8 z-50 bg-white rounded-lg shadow-2xl border-2 border-indigo-300 p-4 animate-fade-in-down"
+          aria-label="Rating filter popup"
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-500">Filter by Rating</span>
+                <span className="text-sm font-bold text-indigo-700">{selectedSkill}</span>
+              </div>
+              <button
+                onClick={() => setShowFilterPopup(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-semibold text-gray-600">Select Ratings:</span>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <label
+                    key={rating}
+                    className={`flex items-center justify-center w-10 h-10 border-2 rounded-md cursor-pointer transition-all ${
+                      selectedRatings.includes(rating)
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-indigo-400 hover:bg-indigo-50'
+                    }`}
+                    title={RATING_LABELS[rating]}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRatings.includes(rating)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRatings([...selectedRatings, rating]);
+                        } else {
+                          setSelectedRatings(selectedRatings.filter((r) => r !== rating));
+                        }
+                      }}
+                      className="sr-only"
+                      aria-label={`Rating ${rating} - ${RATING_LABELS[rating]}`}
+                    />
+                    <span className="font-bold">{rating}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {selectedRatings.length > 0 && (
+              <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                <div className="text-xs text-gray-600">
+                  <span className="font-bold text-indigo-700">{filteredResponses.length}</span> results
+                </div>
+                <button
+                  onClick={clearSkillFilters}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition text-xs font-medium"
+                  title="Clear filter"
+                >
+                  <X size={12} />
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Table Container - Smooth Scrolling */}
       <div className="bg-white rounded-l shadow-2xl overflow-hidden border border-gray-200 flex-1 relative">
-        <div className="overflow-auto h-full">
-          <table className="min-w-full text-sm border-separate border-spacing-0 table-fixed">
+        <div className="overflow-auto h-full overscroll-contain">
+          {/* Standard View Table */}
+            <table className="min-w-full text-sm border-separate border-spacing-0 table-fixed">
             <thead>
               {/* Header Row 1: Main Headers (Personal Info, Skill Sections, Other) - STICKY TOP */}
               <tr>
@@ -820,20 +962,35 @@ export default function Responses() {
                   return (
                     (subOrder[sectionKey] || [])
                       .filter(skill => visibleColumns[skill])
-                      .map((skill) => (
-                        <th
-                          key={skill}
-                          draggable
-                          onDragStart={(e) => handleSubDragStart(e, sectionKey, skill)}
-                          onDragEnd={handleSubDragEnd}
-                          onDragOver={handleSubDragOver}
-                          onDrop={(e) => handleSubDrop(e, sectionKey, skill)}
-                          className={`sticky top-[49px] z-10 px-3 py-2 bg-gray-50 text-xs font-semibold text-gray-700 border-r border-b border-gray-200 cursor-move whitespace-nowrap`}
-                          title={`Drag to reorder ${sectionKey} skills`}
-                        >
-                          {skill}
-                        </th>
-                      ))
+                      .map((skill) => {
+                        const isActiveFilter = selectedSkill === skill && selectedRatings.length > 0;
+                        return (
+                          <th
+                            key={skill}
+                            draggable
+                            onDragStart={(e) => handleSubDragStart(e, sectionKey, skill)}
+                            onDragEnd={handleSubDragEnd}
+                            onDragOver={handleSubDragOver}
+                            onDrop={(e) => handleSubDrop(e, sectionKey, skill)}
+                            onClick={() => handleSkillHeaderClick(skill)}
+                            className={`sticky top-[49px] z-10 px-3 py-2 text-xs font-semibold border-r border-b border-gray-200 cursor-pointer whitespace-nowrap transition-colors ${
+                              isActiveFilter 
+                                ? 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200' 
+                                : 'bg-gray-50 text-gray-700 hover:bg-indigo-50'
+                            }`}
+                            title={`Click to filter by ${skill}`}
+                          >
+                            <div className="flex items-center justify-center gap-1">
+                              {skill}
+                              {isActiveFilter && (
+                                <span className="inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-indigo-600 rounded-full">
+                                  {selectedRatings.length}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                        );
+                      })
                   );
                 })}
               </tr>
@@ -936,10 +1093,22 @@ export default function Responses() {
                         }
 
                         // Display cells
-                        const value =
-                          hdr === 'number' ? index + 1 :
-                            hdr === 'timestamp' ? formatDate(response.timestamp) :
-                              response[hdr as keyof EmployeeResponse] || '';
+                        let value: string | number = '';
+                        if (hdr === 'number') {
+                          value = index + 1;
+                        } else if (hdr === 'timestamp') {
+                          value = formatDate(response.timestamp);
+                        } else {
+                          const rawValue = response[hdr as keyof EmployeeResponse];
+                          // Handle arrays and objects by converting to string
+                          if (Array.isArray(rawValue)) {
+                            value = rawValue.length > 0 ? JSON.stringify(rawValue) : '';
+                          } else if (typeof rawValue === 'object') {
+                            value = JSON.stringify(rawValue);
+                          } else {
+                            value = rawValue as string || '';
+                          }
+                        }
 
                         return (
                           <td key={hdr} className={cellClasses}>
@@ -1004,9 +1173,12 @@ export default function Responses() {
               })}
             </tbody>
           </table>
-          {filteredResponses.length === 0 && searchTerm && (
+          {filteredResponses.length === 0 && (
             <div className="p-8 text-center text-lg text-gray-500 bg-white">
-              No results found for "{searchTerm}".
+              {searchTerm ? `No results found for "${searchTerm}".` : 
+               selectedSkill && selectedRatings.length > 0 ? 
+               `No employees found with ${selectedSkill} rated ${selectedRatings.sort((a, b) => a - b).join(', ')}.` :
+               'No responses found.'}
             </div>
           )}
         </div>
@@ -1043,7 +1215,7 @@ export default function Responses() {
         </div>
       )}
 
-      {/* Tailwind animation classes for reference */}
+      {/* Tailwind animation classes and accessibility styles */}
       <style>{`
         .animate-fade-in-down {
             animation: fadeInDown 0.3s ease-out;
@@ -1057,6 +1229,44 @@ export default function Responses() {
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+        .animate-slide-down {
+            animation: slideDown 0.4s ease-out;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                max-height: 1000px;
+            }
+        }
+        .animate-count-update {
+            animation: countPulse 0.3s ease-in-out;
+        }
+        @keyframes countPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.15);
+                color: rgb(79, 70, 229);
+            }
+        }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
         }
       `}</style>
     </div>

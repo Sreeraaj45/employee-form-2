@@ -23,7 +23,7 @@ const SKILL_SECTIONS = {
     title: 'Programming Skills',
     icon: <Code2 className="w-6 h-6" />,
     color: 'from-sky-400 to-emerald-400',
-    skills: ['Python', 'C++', 'Java', 'JavaScript', 'C', 'PySpark', "SQL", "NoSQL"]
+    skills: ['Python', 'C++', 'Java', 'Rust', 'JavaScript', 'C', 'PySpark', "SQL", "NoSQL"]
   },
   dataAnalytics: {
     title: 'Data Analytics',
@@ -37,7 +37,7 @@ const SKILL_SECTIONS = {
     color: 'from-indigo-400 to-purple-400',
     skills: [
       'Data Modelling (ML Algorithms)',
-      'Statistics',
+      'Statistics (Fundamental statistical concepts)',
       'Dashboards (Power BI, Grafana)'
     ]
   },
@@ -91,8 +91,14 @@ const SKILL_SECTIONS = {
   devops: {
     title: 'DevOps',
     icon: <Settings className="w-6 h-6" />,
-    color: 'from-gray-400 to-slate-500',
+    color: 'from-slate-500 to-indigo-500',
     skills: ['Jenkins', 'CI/CD']
+  },
+  ADAS: {
+    title: 'ADAS',
+    icon: <Settings className="w-6 h-6" />,
+    color: 'from-rose-500 to-orange-500',
+    skills: ['Camera calibration/processing', 'LiDAR (3D)', 'Sensor fusion']
   }
 };
 
@@ -340,7 +346,7 @@ export default function EmployeeForm() {
               <h2 className="text-xl font-bold text-slate-800 mb-4">Additional Skills</h2>
               <textarea
                 rows={4}
-                placeholder="Tell us about other awesome things you can do..."
+                placeholder="Domain or industry areas where you have strong expertise (e.g., Automotive, Healthcare, etc.)"
                 value={formData.additionalSkills}
                 onChange={e => setFormData({ ...formData, additionalSkills: e.target.value })}
                 className="w-full p-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 outline-none resize-none"

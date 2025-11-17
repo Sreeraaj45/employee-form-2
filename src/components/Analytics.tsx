@@ -51,7 +51,7 @@ const RATING_LABELS: Record<number, string> = {
 const SKILL_SECTIONS = {
   programming: {
     title: "Programming Skills",
-    skills: ["Python", "C++", "Java", "JavaScript", "C", "PySpark", "SQL", "NoSQL"],
+    skills: ["Python", "C++", "Java","Rust", "JavaScript", "C", "PySpark", "SQL", "NoSQL"],
     icon: Code,
     color: "text-indigo-600 bg-indigo-100",
   },
@@ -65,7 +65,7 @@ const SKILL_SECTIONS = {
     title: "Data Science",
     skills: [
       "Data Modelling (ML Algorithms)",
-      "Statistics",
+      "Statistics (Fundamental statistical concepts)",
       "Dashboards (Power BI, Grafana)",
     ],
     icon: Star,
@@ -107,8 +107,14 @@ const SKILL_SECTIONS = {
     title: "DevOps",
     skills: ["Jenkins", "CI/CD"],
     icon: Code,
-    color: "text-teal-600 bg-teal-100",
+    color: "from-slate-500 to-indigo-500",
   },
+  ADAS: {
+    title: 'ADAS',
+    skills: ['Camera calibration/processing', 'LiDAR (3D)', 'Sensor fusion'],
+    icon: Code,
+    color: 'from-rose-500 to-orange-500',
+  }
 };
 
 const PIE_COLORS = [
