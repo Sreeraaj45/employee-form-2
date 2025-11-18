@@ -12,7 +12,8 @@ import {
   Server,
   Settings,
   Sparkles,
-  Eye
+  Eye,
+  Car
 } from 'lucide-react';
 import { api } from '../lib/api';
 import confetti from 'canvas-confetti';
@@ -96,7 +97,7 @@ const SKILL_SECTIONS = {
   },
   ADAS: {
     title: 'ADAS',
-    icon: <Settings className="w-6 h-6" />,
+    icon: <Car className="w-6 h-6" />,
     color: 'from-rose-500 to-orange-500',
     skills: ['Camera calibration/processing', 'LiDAR (3D)', 'Sensor fusion']
   }

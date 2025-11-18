@@ -14,15 +14,25 @@ import {
   Maximize2,
   X,
   Users,
+  Code2,
   Code,
   Star,
-  TrendingUp,
-  Zap,
+  BarChart3,
+  Cpu,
+  Brain,
+  Database,
+  Settings,
+  Server,
+  Layout,
+  Car,
+  ChevronDown,
 } from "lucide-react";
 import * as am4core from "@amcharts/amcharts4/core";
 import * as am4charts from "@amcharts/amcharts4/charts";
 import am4themes_animated from "@amcharts/amcharts4/themes/animated";
-import { api } from "../lib/api"; // Assuming the API utility exists
+import { api } from "../lib/api";
+import SkillDetailModal from "./SkillDetailModal";
+import SkillsListModal from "./SkillsListModal";
 
 // --- Chart Setup ---
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -35,31 +45,31 @@ interface EmployeeResponse {
   employee_id: string;
   email: string;
   selected_skills: string[];
-  skill_ratings: Array<{ skill: string; rating: number }>;
+  skill_ratings: Array<{ skill: string; rating: number; section?: string }>;
   additional_skills: string;
-  timestamp: string;
+  timestamp?: string;
 }
 
-const RATING_LABELS: Record<number, string> = {
-  1: "No Knowledge",
-  2: "Novice",
-  3: "Proficient",
-  4: "Expert",
-  5: "Advanced",
-};
+interface EmployeeSkillData {
+  name: string;
+  employee_id: string;
+  email: string;
+  rating: number;
+  categoryAvgRating?: number;
+}
 
 const SKILL_SECTIONS = {
   programming: {
     title: "Programming Skills",
     skills: ["Python", "C++", "Java","Rust", "JavaScript", "C", "PySpark", "SQL", "NoSQL"],
-    icon: Code,
-    color: "text-indigo-600 bg-indigo-100",
+    icon: Code2,
+    color: "from-sky-400 to-emerald-400",
   },
   dataAnalytics: {
     title: "Data Analytics",
     skills: ["Power BI / Tableau", "Visualization Libraries"],
-    icon: TrendingUp,
-    color: "text-green-600 bg-green-100",
+    icon: BarChart3,
+    color: "from-amber-400 to-pink-400",
   },
   dataScience: {
     title: "Data Science",
@@ -68,8 +78,8 @@ const SKILL_SECTIONS = {
       "Statistics (Fundamental statistical concepts)",
       "Dashboards (Power BI, Grafana)",
     ],
-    icon: Star,
-    color: "text-purple-600 bg-purple-100",
+    icon: Brain,
+    color: "from-indigo-400 to-purple-400",
   },
   dataEngineering: {
     title: "Data Engineering",
@@ -82,50 +92,40 @@ const SKILL_SECTIONS = {
       "Docker",
       "flyte",
     ],
-    icon: Zap,
-    color: "text-red-600 bg-red-100",
+    icon: Database,
+    color: "from-orange-400 to-yellow-400",
   },
   aiDL: {
     title: "AI / Deep Learning",
     skills: ["TensorFlow", "PyTorch", "OpenCV", "Computer Vision Models", "Generative AI (GenAI)"],
-    icon: Code,
-    color: "text-pink-600 bg-pink-100",
+    icon: Cpu,
+    color: "from-fuchsia-400 to-rose-400",
   },
   frontend: {
     title: "Frontend Development",
     skills: ["HTML", "CSS", "Bootstrap", "React", "Angular", "Tailwind CSS", "Vue.js", "TypeScript"],
-    icon: Code,
-    color: "text-blue-600 bg-blue-100",
+    icon: Layout,
+    color: "from-cyan-400 to-blue-400",
   },
   backend: {
     title: "Backend Development",
     skills: ["Django", "Flask", "FastAPI", "Spring Boot", "ASP.NET", "Express.js"],
-    icon: Code,
-    color: "text-yellow-600 bg-yellow-100",
+    icon: Server,
+    color: "from-teal-400 to-green-400",
   },
   devops: {
     title: "DevOps",
     skills: ["Jenkins", "CI/CD"],
-    icon: Code,
-    color: "from-slate-500 to-indigo-500",
+    icon: Settings,
+    color: "from-slate-400 to-indigo-400",
   },
   ADAS: {
     title: 'ADAS',
     skills: ['Camera calibration/processing', 'LiDAR (3D)', 'Sensor fusion'],
-    icon: Code,
-    color: 'from-rose-500 to-orange-500',
+    icon: Car,
+    color: 'from-rose-400 to-orange-400',
   }
 };
-
-const PIE_COLORS = [
-    am4core.color("#6366f1"), // Indigo 500
-    am4core.color("#10b981"), // Emerald 500
-    am4core.color("#f97316"), // Orange 500
-    am4core.color("#ef4444"), // Red 500
-    am4core.color("#06b6d4"), // Cyan 500
-    am4core.color("#facc15"), // Yellow 400
-    am4core.color("#a855f7"), // Violet 500
-];
 
 // --- Analytics Component ---
 export default function Analytics() {
@@ -142,6 +142,25 @@ export default function Analytics() {
 
   const [isPieModalOpen, setIsPieModalOpen] = useState(false);
   const [isBarModalOpen, setIsBarModalOpen] = useState(false);
+  
+  // Modal state for skill details
+  const [skillModalOpen, setSkillModalOpen] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<{
+    name: string;
+    employees: EmployeeSkillData[];
+    sectionTitle: string;
+    sectionColor: string;
+  } | null>(null);
+  const [showTop5Only, setShowTop5Only] = useState(true);
+
+  // Skills list modal state
+  const [skillsListModalOpen, setSkillsListModalOpen] = useState(false);
+  const [selectedSection, setSelectedSection] = useState<{
+    key: string;
+    title: string;
+    color: string;
+    icon: any;
+  } | null>(null);
 
   // --- Data Loading and Analysis ---
   const loadAnalytics = async () => {
@@ -258,15 +277,115 @@ export default function Analytics() {
         ).toFixed(1)
       : "0";
 
-  const skillsBySection = Object.entries(SKILL_SECTIONS).map(([key, section]: any) => {
-    const skillSet = new Set(section.skills);
-    const count = skillAnalytics.reduce(
-      (acc, s) => (skillSet.has(s.skill) ? acc + s.count : acc),
-      0
-    );
-    const distinct = skillAnalytics.filter((s) => skillSet.has(s.skill)).length;
-    return { key, title: section.title, count, distinctSkills: distinct, icon: section.icon, color: section.color };
-  });
+  // Calculate category average rating for an employee
+  const getCategoryAverageRating = (employeeId: string, sectionKey: string): number => {
+    const section = SKILL_SECTIONS[sectionKey as keyof typeof SKILL_SECTIONS];
+    if (!section) return 0;
+
+    const response = responses.find(r => r.employee_id === employeeId);
+    if (!response) return 0;
+
+    const sectionSkills = new Set(section.skills);
+    const ratings = response.skill_ratings?.filter(sr => sectionSkills.has(sr.skill)) || [];
+    
+    if (ratings.length === 0) return 0;
+    
+    const sum = ratings.reduce((acc, sr) => acc + sr.rating, 0);
+    return sum / ratings.length;
+  };
+
+  // Get employees for a specific skill
+  const getEmployeesForSkill = (skillName: string, sectionKey?: string): EmployeeSkillData[] => {
+    const employees: EmployeeSkillData[] = [];
+    
+    responses.forEach((response) => {
+      const skillRating = response.skill_ratings?.find(
+        (sr) => sr.skill === skillName
+      );
+      
+      if (skillRating) {
+        const categoryAvgRating = sectionKey ? getCategoryAverageRating(response.employee_id, sectionKey) : undefined;
+        
+        employees.push({
+          name: response.name,
+          employee_id: response.employee_id,
+          email: response.email,
+          rating: skillRating.rating,
+          categoryAvgRating,
+        });
+      }
+    });
+    
+    // Sort by rating (highest first), then by category average
+    return employees.sort((a, b) => {
+      if (b.rating !== a.rating) {
+        return b.rating - a.rating;
+      }
+      return (b.categoryAvgRating || 0) - (a.categoryAvgRating || 0);
+    });
+  };
+
+  // Get top 5 employees for each skill in a section
+  const getTopEmployeesPerSection = (sectionKey: string) => {
+    const section = SKILL_SECTIONS[sectionKey as keyof typeof SKILL_SECTIONS];
+    if (!section) return [];
+    
+    return section.skills.map((skill) => {
+      const allEmployees = getEmployeesForSkill(skill);
+      const top5 = allEmployees.slice(0, 5);
+      
+      return {
+        skill,
+        employees: top5,
+        totalCount: allEmployees.length,
+        allEmployees,
+      };
+    }).filter(item => item.totalCount > 0); // Only show skills with employees
+  };
+
+  const handleViewAllEmployees = (
+    skillName: string,
+    sectionTitle: string,
+    sectionColor: string,
+    sectionKey: string
+  ) => {
+    const employees = getEmployeesForSkill(skillName, sectionKey);
+    setSelectedSkill({
+      name: skillName,
+      employees,
+      sectionTitle,
+      sectionColor,
+    });
+    setShowTop5Only(true);
+    setSkillModalOpen(true);
+  };
+
+  const handleSectionClick = (sectionKey: string) => {
+    const section = SKILL_SECTIONS[sectionKey as keyof typeof SKILL_SECTIONS];
+    if (!section) return;
+
+    setSelectedSection({
+      key: sectionKey,
+      title: section.title,
+      color: section.color,
+      icon: section.icon,
+    });
+    setSkillsListModalOpen(true);
+  };
+
+  const handleSkillClickFromList = (skillName: string) => {
+    if (!selectedSection) return;
+    
+    setSkillsListModalOpen(false);
+    handleViewAllEmployees(skillName, selectedSection.title, selectedSection.color, selectedSection.key);
+  };
+
+  const handleBackToSkillsList = () => {
+    setSkillModalOpen(false);
+    setSelectedSkill(null);
+    setShowTop5Only(true);
+    setSkillsListModalOpen(true);
+  };
 
   // --- Chart.js Data and Options ---
   const barChartData = {
@@ -565,27 +684,56 @@ export default function Analytics() {
         </div>
       </div>
 
+      {/* --- Skill Categories Grid (3x3) --- */}
+      <div className="space-y-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Skill Categories</h2>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {Object.entries(SKILL_SECTIONS).map(([sectionKey, section]) => {
+            const topEmployeesData = getTopEmployeesPerSection(sectionKey);
+            
+            if (topEmployeesData.length === 0) return null;
+            
+            const Icon = section.icon;
+            const totalEmployees = topEmployeesData.reduce((sum, skill) => sum + skill.totalCount, 0);
+            
+            return (
+              <button
+                key={sectionKey}
+                onClick={() => handleSectionClick(sectionKey)}
+                className={`bg-gradient-to-br ${section.color} rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 transform hover:scale-105 text-left group`}
+              >
+                <div className="flex items-start justify-between mb-3 md:mb-4">
+                  <div className={`p-3 md:p-4 rounded-xl bg-white/30 group-hover:bg-white/50 transition-all`}>
+                    <Icon size={28} className="text-white md:w-8 md:h-8" />
+                  </div>
+                  <div className="bg-white/90 px-2 md:px-3 py-1 rounded-full">
+                    <span className="text-xs md:text-sm font-bold text-gray-700">
+                      {topEmployeesData.length} skills
+                    </span>
+                  </div>
+                </div>
+                
+                <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2 group-hover:text-white/90 transition-colors">
+                  {section.title}
+                </h3>
+                
+                <p className="text-xs md:text-sm text-white/80 font-medium">
+                  {totalEmployees} total employee {totalEmployees === 1 ? 'rating' : 'ratings'}
+                </p>
+                
+                <div className="mt-3 md:mt-4 flex items-center gap-2 text-xs md:text-sm font-semibold text-white">
+                  <span>View Skills</span>
+                  <ChevronDown size={16} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* --- Skills by Section & Ratings/Top Skills --- */}
       <div className="space-y-8">
-        {/* Skills by Section Grid */}
-        {/* <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6">
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">Skills by Domain</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {skillsBySection.map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.key} className={`p-4 rounded-xl border border-gray-100 shadow- ${s.color}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Icon size={20} />
-                    <div className="text-sm font-semibold whitespace-nowrap">{s.title}</div>
-                  </div>
-                  <div className="text-3xl font-extrabold text-gray-800">{s.count}</div>
-                  <div className="text-xs text-gray-600 mt-1">{s.distinctSkills} distinct</div>
-                </div>
-              );
-            })}
-          </div>
-        </div> */}
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Top Skills List (Progress Bars) */}
@@ -708,6 +856,45 @@ export default function Analytics() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Skills List Modal */}
+      {selectedSection && (
+        <SkillsListModal
+          isOpen={skillsListModalOpen}
+          onClose={() => {
+            setSkillsListModalOpen(false);
+            setSelectedSection(null);
+          }}
+          sectionTitle={selectedSection.title}
+          sectionColor={selectedSection.color}
+          sectionIcon={selectedSection.icon}
+          skills={getTopEmployeesPerSection(selectedSection.key).map(s => ({
+            skill: s.skill,
+            totalCount: s.totalCount,
+          }))}
+          onSkillClick={handleSkillClickFromList}
+        />
+      )}
+
+      {/* Skill Detail Modal */}
+      {selectedSkill && (
+        <SkillDetailModal
+          isOpen={skillModalOpen}
+          onClose={() => {
+            setSkillModalOpen(false);
+            setSelectedSkill(null);
+            setShowTop5Only(true);
+            setSelectedSection(null);
+          }}
+          skillName={selectedSkill.name}
+          employees={selectedSkill.employees}
+          sectionTitle={selectedSkill.sectionTitle}
+          sectionColor={selectedSkill.sectionColor}
+          showTop5Only={showTop5Only}
+          onShowMore={() => setShowTop5Only(false)}
+          onBack={selectedSection ? handleBackToSkillsList : undefined}
+        />
       )}
     </div>
   );
