@@ -405,11 +405,11 @@ export default function Analytics() {
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-          gradient.addColorStop(0, "rgba(16, 185, 129, 0.9)"); // Emerald 500
-          gradient.addColorStop(1, "rgba(5, 150, 105, 0.7)"); // Emerald 600
+          gradient.addColorStop(0, "rgba(59, 130, 246, 0.9)"); // Blue 500
+          gradient.addColorStop(1, "rgba(37, 99, 235, 0.7)"); // Blue 600
           return gradient;
         },
-        borderColor: "rgba(16, 185, 129, 1)",
+        borderColor: "rgba(59, 130, 246, 1)",
         borderWidth: 1,
         borderRadius: 4,
         barPercentage: 0.8,
@@ -462,11 +462,11 @@ export default function Analytics() {
         backgroundColor: (context: any) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-          gradient.addColorStop(0, "rgba(16, 185, 129, 0.9)");
-          gradient.addColorStop(1, "rgba(5, 150, 105, 0.7)");
+          gradient.addColorStop(0, "rgba(59, 130, 246, 0.9)");
+          gradient.addColorStop(1, "rgba(37, 99, 235, 0.7)");
           return gradient;
         },
-        borderColor: "rgba(16, 185, 129, 1)",
+        borderColor: "rgba(59, 130, 246, 1)",
         borderWidth: 1,
         borderRadius: 8,
         barPercentage: 0.4,
@@ -684,7 +684,7 @@ export default function Analytics() {
             <button
               onClick={() => setIsBarModalOpen(true)}
               title="Open bar chart fullscreen (Top 10)"
-              className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"
+              className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
             >
               <Maximize2 size={18} />
             </button>
@@ -706,7 +706,7 @@ export default function Analytics() {
             <button
               onClick={() => setIsPieModalOpen(true)}
               title="Open pie chart fullscreen"
-              className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 transition"
+              className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
             >
               <Maximize2 size={18} />
             </button>
@@ -784,7 +784,7 @@ export default function Analytics() {
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-lg font-semibold text-gray-800">{skill.skill}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-medium text-emerald-600">
+                        <span className="text-base font-medium text-blue-600">
                           {skill.avgRating.toFixed(2)} / 5.0
                         </span>
                         <span className="text-xs text-gray-500">
@@ -794,7 +794,7 @@ export default function Analytics() {
                     </div>
                     <div className="bg-gray-200 rounded-full h-2.5 overflow-hidden">
                       <div
-                        className="bg-emerald-500 h-full transition-all duration-700 ease-out"
+                        className="bg-blue-500 h-full transition-all duration-700 ease-out"
                         style={{
                           width: `${(skill.avgRating / 5) * 100}%`,
                         }}
