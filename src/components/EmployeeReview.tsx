@@ -23,9 +23,13 @@ import {
   ChevronUp,
   CheckCircle,
   Eye,
-  Edit
+  Edit,
+  Printer
 } from 'lucide-react';
 import { api } from '../lib/api';
+import SkillRadar from './SkillRadar';
+import { printReview } from './PrintReview';
+import { captureCanvasAsImage } from '../lib/captureCanvas';
 
 interface EmployeeResponse {
   _id?: string;
@@ -226,6 +230,9 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
   // navigator visibility toggle - initially hidden per request
   const [showNavigator, setShowNavigator] = useState(false);
 
+  // State for viewing individual section radars in complete overview
+  const [selectedRadarSection, setSelectedRadarSection] = useState<string | null>(null);
+
   useEffect(() => {
     loadEmployeeData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -245,7 +252,7 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
         setEmployee(employeeData);
 
         // Check if manager review is already completed
-        const hasManagerReview = employeeData.manager_ratings && employeeData.manager_ratings.length > 0;
+        const hasManagerReview = !!(employeeData.manager_ratings && employeeData.manager_ratings.length > 0);
         setReviewCompleted(hasManagerReview);
 
         const selectedSet = new Set<string>(employeeData.selected_skills || []);
@@ -516,7 +523,7 @@ if (reviewCompleted) {
             </button>
           </div>
 
-          {/* Completion Banner with Edit Button */}
+          {/* Completion Banner with Edit and Print Buttons */}
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -526,13 +533,35 @@ if (reviewCompleted) {
                   <p className="text-green-700">Manager review has been submitted for {employee.name}.</p>
                 </div>
               </div>
-              <button
-                onClick={() => setReviewCompleted(false)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-              >
-                <Edit size={16} />
-                Edit Review
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={async () => {
+                    const radarImage = await captureCanvasAsImage('canvas');
+                    await printReview({ 
+                      employee: {
+                        name: employee.name,
+                        employee_id: employee.employee_id,
+                        email: employee.email,
+                        additional_skills: employee.additional_skills
+                      },
+                      skillReviews,
+                      overallManagerReview,
+                      radarChartImage: radarImage || undefined
+                    });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-medium"
+                >
+                  <Printer size={16} />
+                  Print
+                </button>
+                <button
+                  onClick={() => setReviewCompleted(false)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                >
+                  <Edit size={16} />
+                  Edit Review
+                </button>
+              </div>
             </div>
           </div>
 
@@ -630,6 +659,68 @@ if (reviewCompleted) {
                 </div>
               </div>
             )}
+
+            {/* Complete Skill Radar Chart */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 mb-6">
+              {/* Section selector buttons */}
+              <div className="mb-6 flex flex-wrap gap-2 justify-center">
+                <button
+                  onClick={() => setSelectedRadarSection(null)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedRadarSection === null
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  All Skills
+                </button>
+                {skillsBySection.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <button
+                      key={section.key}
+                      onClick={() => setSelectedRadarSection(section.key)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                        selectedRadarSection === section.key
+                          ? `bg-gradient-to-r ${section.color} text-white shadow-md`
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      <Icon size={16} />
+                      {section.title}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Radar chart display */}
+              <SkillRadar
+                skills={
+                  selectedRadarSection === null
+                    ? skillReviews.map(s => ({
+                        skill: s.skill,
+                        expectation: s.expectation,
+                        selfRating: s.selfRating,
+                        managerRating: s.managerRating
+                      }))
+                    : skillReviews
+                        .filter(s => s.section === selectedRadarSection)
+                        .map(s => ({
+                          skill: s.skill,
+                          expectation: s.expectation,
+                          selfRating: s.selfRating,
+                          managerRating: s.managerRating
+                        }))
+                }
+                title={
+                  selectedRadarSection === null
+                    ? 'Complete Skills Overview'
+                    : `${skillsBySection.find(s => s.key === selectedRadarSection)?.title} - Skill Radar`
+                }
+                width={800}
+                height={800}
+              />
+            </div>
 
             <div className="flex justify-end items-center">
               <button 
@@ -889,6 +980,21 @@ if (reviewCompleted) {
               </table>
             </div>
 
+            {/* Skill Radar Chart for Section */}
+            <div className="p-4 md:p-6 bg-gray-50 border-t border-gray-200">
+              <SkillRadar
+                skills={activeSection.skills.map(s => ({
+                  skill: s.skill,
+                  expectation: s.expectation,
+                  selfRating: s.selfRating,
+                  managerRating: s.managerRating
+                }))}
+                title={`${activeSection.title} - Skill Radar`}
+                width={500}
+                height={500}
+              />
+            </div>
+
             {/* Nav buttons */}
             <div className="p-4 md:p-6 flex justify-between items-center">
               <button type="button" onClick={() => setCurrentStep(s => Math.max(0, s - 1))} disabled={currentStep === 0} className={`px-5 py-2 rounded-xl font-semibold shadow-md ${currentStep === 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-slate-400 to-slate-600 text-white'}`}>
@@ -989,6 +1095,68 @@ if (reviewCompleted) {
               <textarea value={overallManagerReview} onChange={(e) => setOverallManagerReview(e.target.value)} placeholder="Provide your overall assessment, feedback, and recommendations for this employee..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none" rows={5} />
             </div>
 
+            {/* Complete Skill Radar Chart Preview */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 mb-6">
+              {/* Section selector buttons */}
+              <div className="mb-6 flex flex-wrap gap-2 justify-center">
+                <button
+                  onClick={() => setSelectedRadarSection(null)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedRadarSection === null
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                  }`}
+                >
+                  All Skills
+                </button>
+                {skillsBySection.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <button
+                      key={section.key}
+                      onClick={() => setSelectedRadarSection(section.key)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                        selectedRadarSection === section.key
+                          ? `bg-gradient-to-r ${section.color} text-white shadow-md`
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      <Icon size={16} />
+                      {section.title}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Radar chart display */}
+              <SkillRadar
+                skills={
+                  selectedRadarSection === null
+                    ? skillReviews.map(s => ({
+                        skill: s.skill,
+                        expectation: s.expectation,
+                        selfRating: s.selfRating,
+                        managerRating: s.managerRating
+                      }))
+                    : skillReviews
+                        .filter(s => s.section === selectedRadarSection)
+                        .map(s => ({
+                          skill: s.skill,
+                          expectation: s.expectation,
+                          selfRating: s.selfRating,
+                          managerRating: s.managerRating
+                        }))
+                }
+                title={
+                  selectedRadarSection === null
+                    ? 'Complete Skills Overview'
+                    : `${skillsBySection.find(s => s.key === selectedRadarSection)?.title} - Skill Radar`
+                }
+                width={800}
+                height={800}
+              />
+            </div>
+
             {/* Save message feedback */}
             {saveMessage && (
               <div className={`mb-4 p-4 rounded-lg ${saveMessage.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
@@ -1006,6 +1174,28 @@ if (reviewCompleted) {
 
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setCurrentStep(0)} className="px-4 py-2 rounded-lg border">Start Over</button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const radarImage = await captureCanvasAsImage('canvas');
+                    await printReview({ 
+                      employee: {
+                        name: employee.name,
+                        employee_id: employee.employee_id,
+                        email: employee.email,
+                        additional_skills: employee.additional_skills
+                      },
+                      skillReviews,
+                      overallManagerReview,
+                      radarChartImage: radarImage || undefined
+                    });
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition font-medium"
+                >
+                  <Printer size={16} />
+                  Print Preview
+                </button>
 
                 <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold disabled:opacity-50 disabled:cursor-not-allowed">
                   <Save size={18} /> {saving ? 'Saving...' : 'Submit Feedback'}
