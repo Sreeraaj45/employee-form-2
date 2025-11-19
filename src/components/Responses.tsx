@@ -12,7 +12,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { api } from '../lib/api'; // Assuming this is defined
+import { api } from '../lib/api';
+import EmployeeReview from './EmployeeReview';
 
 // --- Constants (Tailwind colors updated for visual appeal) ---
 
@@ -125,6 +126,15 @@ export default function Responses() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<EmployeeResponse>>({});
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+
+  // --- Review State ---
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [reviewedEmployees, setReviewedEmployees] = useState<Set<string>>(new Set());
+
+  // Check if employee has manager review (placeholder - you'll need to implement actual storage)
+  const hasManagerReview = (employeeId: string) => {
+    return reviewedEmployees.has(employeeId);
+  };
 
   // --- UI/Filter State ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -596,6 +606,19 @@ export default function Responses() {
     XLSX.writeFile(wb, filename, { bookType: 'xlsx', bookSST: false, cellStyles: true });
   };
   
+  // --- Show Employee Review if selected ---
+  if (selectedEmployeeId) {
+    return (
+      <EmployeeReview
+        employeeId={selectedEmployeeId}
+        onBack={() => setSelectedEmployeeId(null)}
+        onSaveSuccess={(empId) => {
+          setReviewedEmployees(prev => new Set(prev).add(empId));
+        }}
+      />
+    );
+  }
+
   // --- Loading / Empty / Error Views ---
   if (loading)
     return (
@@ -1112,9 +1135,36 @@ export default function Responses() {
 
                         return (
                           <td key={hdr} className={cellClasses}>
-                            <span className={hdr === 'employee_id' ? 'font-mono text-indigo-700 font-semibold' : hdr === 'name' ? 'font-semibold' : 'text-gray-600'}>
-                              {value}
-                            </span>
+                            {hdr === 'name' ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setSelectedEmployeeId(displayData._id || null)}
+                                  className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                                >
+                                  {value}
+                                </button>
+                                {/* Green tick for reviewed employees */}
+                                {displayData._id && hasManagerReview(displayData._id) && (
+                                  <span title="Manager review completed">
+                                    <svg
+                                      className="w-4 h-4 text-green-500"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className={hdr === 'employee_id' ? 'font-mono text-indigo-700 font-semibold' : 'text-gray-600'}>
+                                {value}
+                              </span>
+                            )}
                           </td>
                         );
                       }
