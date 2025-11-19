@@ -21,7 +21,9 @@ import {
   Car,
   ChevronDown,
   ChevronUp,
-  CheckCircle
+  CheckCircle,
+  Eye,
+  Edit
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -34,6 +36,12 @@ interface EmployeeResponse {
   skill_ratings: Array<{ skill: string; rating: number }>;
   additional_skills: string;
   timestamp?: string;
+  // Manager review fields
+  manager_ratings?: Array<{ skill: string; rating: number }>;
+  company_expectations?: Array<{ skill: string; expectation: number }>;
+  rating_gaps?: Array<{ skill: string; gap: number }>;
+  overall_manager_review?: string;
+  manager_review_timestamp?: string;
 }
 
 interface SkillReview {
@@ -195,7 +203,7 @@ const SECTION_SHORT_LABELS: Record<string, string> = {
 
 const getSkillSection = (skillName: string): string => {
   for (const [key, section] of Object.entries(SKILL_SECTIONS)) {
-    if ((section.skills as string[]).includes(skillName)) {
+    if ((section.skills as readonly string[]).includes(skillName)) {
       return key;
     }
   }
@@ -208,6 +216,8 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
   const [overallManagerReview, setOverallManagerReview] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [reviewCompleted, setReviewCompleted] = useState(false);
 
   // step navigation (each step shows a single section; last step is review)
   const [sectionKeys, setSectionKeys] = useState<string[]>([]);
@@ -234,6 +244,10 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
       if (employeeData) {
         setEmployee(employeeData);
 
+        // Check if manager review is already completed
+        const hasManagerReview = employeeData.manager_ratings && employeeData.manager_ratings.length > 0;
+        setReviewCompleted(hasManagerReview);
+
         const selectedSet = new Set<string>(employeeData.selected_skills || []);
         (employeeData.skill_ratings || []).forEach(sr => selectedSet.add(sr.skill));
 
@@ -244,14 +258,35 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
             if (selectedSet.has(skill)) {
               const rated = (employeeData.skill_ratings || []).find(s => s.skill === skill);
               const selfRating = rated ? rated.rating : 0;
-              const expectation = SKILL_EXPECTATIONS[skill] ?? (selfRating || 0);
+              
+              // Populate company expectations from database (fallback to SKILL_EXPECTATIONS constant)
+              let expectation = SKILL_EXPECTATIONS[skill] ?? (selfRating || 0);
+              if (employeeData.company_expectations) {
+                const dbExpectation = employeeData.company_expectations.find(e => e.skill === skill);
+                if (dbExpectation) {
+                  expectation = dbExpectation.expectation;
+                }
+              }
+              
+              // Populate manager rating from database
+              let managerRating = 0;
+              if (hasManagerReview) {
+                const managerRated = employeeData.manager_ratings!.find(m => m.skill === skill);
+                if (managerRated) {
+                  managerRating = managerRated.rating;
+                }
+              }
+              
+              // Recalculate gap based on loaded manager rating and self rating
+              const gap = managerRating > 0 ? managerRating - selfRating : 0;
+              
               reviews.push({
                 skill,
                 section: key,
                 expectation,
                 selfRating,
-                managerRating: 0,
-                gap: 0
+                managerRating,
+                gap
               });
             }
           }
@@ -259,16 +294,42 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
 
         // include any selected skills not in defined sections
         for (const s of selectedSet) {
-          const inSections = Object.values(SKILL_SECTIONS).some(sec => sec.skills.includes(s));
+          const inSections = Object.values(SKILL_SECTIONS).some(sec => (sec.skills as readonly string[]).includes(s));
           if (!inSections) {
             const rated = (employeeData.skill_ratings || []).find(r => r.skill === s);
             const selfRating = rated ? rated.rating : 0;
-            const expectation = SKILL_EXPECTATIONS[s] ?? (selfRating || 0);
-            reviews.push({ skill: s, section: 'other', expectation, selfRating, managerRating: 0, gap: 0 });
+            
+            // Populate company expectations from database (fallback to SKILL_EXPECTATIONS constant)
+            let expectation = SKILL_EXPECTATIONS[s] ?? (selfRating || 0);
+            if (employeeData.company_expectations) {
+              const dbExpectation = employeeData.company_expectations.find(e => e.skill === s);
+              if (dbExpectation) {
+                expectation = dbExpectation.expectation;
+              }
+            }
+            
+            // Populate manager rating from database
+            let managerRating = 0;
+            if (hasManagerReview) {
+              const managerRated = employeeData.manager_ratings!.find(m => m.skill === s);
+              if (managerRated) {
+                managerRating = managerRated.rating;
+              }
+            }
+            
+            // Recalculate gap based on loaded manager rating and self rating
+            const gap = managerRating > 0 ? managerRating - selfRating : 0;
+            
+            reviews.push({ skill: s, section: 'other', expectation, selfRating, managerRating, gap });
           }
         }
 
         setSkillReviews(reviews);
+        
+        // Load overall manager review text into state
+        if (employeeData.overall_manager_review) {
+          setOverallManagerReview(employeeData.overall_manager_review);
+        }
 
         // determine which section keys actually have skills
         const keysWithSkills = Object.entries(SKILL_SECTIONS)
@@ -278,7 +339,9 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
         if (reviews.some(r => r.section === 'other')) keysWithSkills.push('other');
 
         setSectionKeys(keysWithSkills);
-        setCurrentStep(0);
+        
+        // If review is completed, start at review step
+        setCurrentStep(hasManagerReview ? keysWithSkills.length : 0);
       }
     } catch (err) {
       console.error('Error loading employee data:', err);
@@ -302,18 +365,67 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveMessage(null);
+    
     try {
-      // replace with real API call when ready
-      // await api.saveManagerReviews(employeeId, skillReviews, overallManagerReview);
-      console.log('Saving reviews:', { employeeId, skillReviews, overallManagerReview });
+      // Transform skillReviews state into API request format
+      const managerRatings = skillReviews
+        .filter(sr => sr.managerRating > 0)
+        .map(sr => ({ skill: sr.skill, rating: sr.managerRating }));
+      
+      const companyExpectations = skillReviews.map(sr => ({
+        skill: sr.skill,
+        expectation: sr.expectation
+      }));
+      
+      const ratingGaps = skillReviews
+        .filter(sr => sr.managerRating > 0)
+        .map(sr => ({ skill: sr.skill, gap: sr.gap }));
+
+      // Call API to save manager review
+      await api.saveManagerReview(employeeId, {
+        managerRatings,
+        companyExpectations,
+        ratingGaps,
+        overallManagerReview
+      });
+
+      // Mark review as completed
+      setReviewCompleted(true);
+      
+      // Display success message
+      setSaveMessage({ type: 'success', text: 'Manager review saved successfully!' });
 
       if (onSaveSuccess) onSaveSuccess(employeeId);
 
-      alert('Reviews saved successfully!');
-      onBack();
     } catch (err) {
       console.error('Error saving reviews:', err);
-      alert('Failed to save reviews');
+      
+      // Display specific error messages for validation failures
+      let errorMessage = 'Failed to save manager review. Please try again.';
+      
+      if (err instanceof Error) {
+        const errMsg = err.message.toLowerCase();
+        
+        // Check for specific validation errors
+        if (errMsg.includes('rating') && errMsg.includes('between')) {
+          errorMessage = 'Invalid rating value. Ratings must be between 1 and 5.';
+        } else if (errMsg.includes('gap')) {
+          errorMessage = 'Invalid gap value detected. Please check your ratings.';
+        } else if (errMsg.includes('expectation')) {
+          errorMessage = 'Invalid expectation value. Expectations must be between 1 and 5.';
+        } else if (errMsg.includes('not found') || errMsg.includes('404')) {
+          errorMessage = 'Employee response not found. Please refresh and try again.';
+        } else if (errMsg.includes('network') || errMsg.includes('fetch')) {
+          errorMessage = 'Unable to save review. Please check your connection.';
+        } else if (err.message) {
+          // Use the specific error message from the API
+          errorMessage = err.message;
+        }
+      }
+      
+      // Display error message (prevent navigation away from page if save fails)
+      setSaveMessage({ type: 'error', text: errorMessage });
     } finally {
       setSaving(false);
     }
@@ -388,6 +500,151 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
   const totalAssessed = skillReviews.length;
   const managerCompleted = skillReviews.filter(r => r.managerRating > 0).length;
   const overallStatus = overallManagerReview.trim() !== '' ? 'Complete' : 'Pending';
+
+  // If review is completed, show only the final review
+  // If review is completed, show only the final review
+if (reviewCompleted) {
+  return (
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header block */}
+        <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-6">
+          <div className="mb-3">
+            <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
+              <ArrowLeft size={18} />
+              <span className="font-medium">Back to Responses</span>
+            </button>
+          </div>
+
+          {/* Completion Banner with Edit Button */}
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="text-green-600" size={24} />
+                <div>
+                  <h3 className="text-lg font-bold text-green-800">Review Completed</h3>
+                  <p className="text-green-700">Manager review has been submitted for {employee.name}.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setReviewCompleted(false)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                <Edit size={16} />
+                Edit Review
+              </button>
+            </div>
+          </div>
+
+          {/* Final Review Display */}
+          <div className="bg-white rounded-2xl p-2">
+            <h2 className="text-xl md:text-2xl font-bold mb-6 text-slate-800 flex items-center gap-3">
+              <Eye className="text-indigo-600" />
+              Review - {employee.name}
+            </h2>
+
+            <div className="overflow-x-auto mb-6">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Skill</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Expectation from Company</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Self</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Manager</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Gap (Mgr - Self)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {skillReviews.map((r) => (
+                    <tr key={r.skill} className="hover:bg-gray-50">
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-gray-800">{r.skill}</div>
+                        <div className="text-xs text-gray-500">{r.section}</div>
+                      </td>
+
+                      {/* Expectation Column */}
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <Star
+                                key={star}
+                                size={16}
+                                fill={star <= r.expectation ? '#10B981' : 'none'}
+                                stroke={star <= r.expectation ? '#10B981' : '#D1D5DB'}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs font-medium text-emerald-700">
+                            {RATING_LABELS[r.expectation]}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <Star key={star} size={16} fill={star <= r.selfRating ? '#FBBF24' : 'none'} stroke={star <= r.selfRating ? '#FBBF24' : '#D1D5DB'} />
+                            ))}
+                          </div>
+                          <span className="text-xs font-medium text-gray-700">{RATING_LABELS[r.selfRating]}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <Star key={star} size={16} fill={star <= r.managerRating ? '#3B82F6' : 'none'} stroke={star <= r.managerRating ? '#3B82F6' : '#D1D5DB'} />
+                            ))}
+                          </div>
+                          <span className="text-xs font-medium text-blue-700">{RATING_LABELS[r.managerRating]}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex justify-center">
+                          {r.managerRating > 0 ? (
+                            <div className={`flex items-center gap-1 px-3 py-1 rounded-full font-bold text-sm ${getGapColor(r.gap)}`}>
+                              {getGapIcon(r.gap)}
+                              <span>{r.gap}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400 italic">Not rated</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Overall manager review */}
+            {overallManagerReview && (
+              <div className="bg-white rounded-xl p-2 mb-4">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Overall Manager Review</h3>
+                <div className="px-4 py-3 border-2 border-gray-300 rounded-lg text-sm bg-gray-50 whitespace-pre-line">
+                  {overallManagerReview}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end items-center">
+              <button 
+                onClick={onBack}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+              >
+                Back to Responses
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -653,6 +910,7 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
                 <thead className="bg-gray-50 border-b-2 border-gray-200">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Skill</th>
+                    <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Expectation from Company</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Self</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Manager</th>
                     <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Gap (Mgr - Self)</th>
@@ -664,6 +922,25 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
                       <td className="px-4 py-4">
                         <div className="font-medium text-gray-800">{r.skill}</div>
                         <div className="text-xs text-gray-500">{r.section}</div>
+                      </td>
+
+                      {/* Expectation Column */}
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <Star
+                                key={star}
+                                size={16}
+                                fill={star <= r.expectation ? '#10B981' : 'none'}
+                                stroke={star <= r.expectation ? '#10B981' : '#D1D5DB'}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs font-medium text-emerald-700">
+                            {RATING_LABELS[r.expectation]}
+                          </span>
+                        </div>
                       </td>
 
                       <td className="px-4 py-4 text-center">
@@ -712,6 +989,15 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
               <textarea value={overallManagerReview} onChange={(e) => setOverallManagerReview(e.target.value)} placeholder="Provide your overall assessment, feedback, and recommendations for this employee..." className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none" rows={5} />
             </div>
 
+            {/* Save message feedback */}
+            {saveMessage && (
+              <div className={`mb-4 p-4 rounded-lg ${saveMessage.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <p className={`text-sm font-medium ${saveMessage.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
+                  {saveMessage.text}
+                </p>
+              </div>
+            )}
+
             {/* Review controls */}
             <div className="flex justify-between items-center gap-4">
               <button type="button" onClick={() => setCurrentStep(s => Math.max(0, s - 1))} className="px-5 py-2 rounded-xl font-semibold shadow-md bg-gradient-to-r from-slate-400 to-slate-600 text-white">
@@ -721,7 +1007,7 @@ export default function EmployeeReview({ employeeId, onBack, onSaveSuccess }: Em
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setCurrentStep(0)} className="px-4 py-2 rounded-lg border">Start Over</button>
 
-                <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold">
+                <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold disabled:opacity-50 disabled:cursor-not-allowed">
                   <Save size={18} /> {saving ? 'Saving...' : 'Submit Feedback'}
                 </button>
               </div>

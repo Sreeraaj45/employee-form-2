@@ -129,7 +129,26 @@ app.get('/api/responses', requireDB, async (req, res) => {
       .find()
       .sort({ timestamp: -1 })
       .toArray();
-    res.json(responses);
+    
+    // Map responses to include manager review fields with backward compatibility
+    const mappedResponses = responses.map(response => ({
+      _id: response._id,
+      name: response.name,
+      employee_id: response.employee_id,
+      email: response.email,
+      selected_skills: response.selected_skills,
+      skill_ratings: response.skill_ratings,
+      additional_skills: response.additional_skills,
+      timestamp: response.timestamp,
+      // Manager review fields (optional, undefined if not present)
+      manager_ratings: response.manager_ratings,
+      company_expectations: response.company_expectations,
+      rating_gaps: response.rating_gaps,
+      overall_manager_review: response.overall_manager_review,
+      manager_review_timestamp: response.manager_review_timestamp
+    }));
+    
+    res.json(mappedResponses);
   } catch (error) {
     console.error('Error fetching responses:', error);
     res.status(500).json({ error: 'Failed to fetch responses' });
@@ -319,6 +338,131 @@ app.delete('/api/responses/:id', requireDB, async (req, res) => {
   }
 });
 
+// ADD THE MISSING MANAGER REVIEW ENDPOINT HERE
+app.put('/api/responses/:id/manager-review', requireDB, async (req, res) => {
+  console.log('🔍 Manager review endpoint hit!', req.params.id);
+  console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+  
+  try {
+    const { id } = req.params;
+    const { managerRatings, companyExpectations, ratingGaps, overallManagerReview } = req.body;
+
+    // Validate ID format
+    let objectId;
+    try {
+      objectId = new ObjectId(id);
+    } catch (error) {
+      console.error('❌ Invalid ID format:', id);
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+
+    // Validate manager ratings
+    if (managerRatings && Array.isArray(managerRatings)) {
+      for (const item of managerRatings) {
+        if (!item.skill || typeof item.rating !== 'number') {
+          return res.status(400).json({ 
+            error: 'Invalid data format',
+            details: 'Manager ratings must contain skill name and rating value'
+          });
+        }
+        if (item.rating < 1 || item.rating > 5 || !Number.isInteger(item.rating)) {
+          return res.status(400).json({ 
+            error: 'Invalid data format',
+            details: 'Ratings must be integers between 1 and 5'
+          });
+        }
+      }
+    }
+
+    // Validate company expectations
+    if (companyExpectations && Array.isArray(companyExpectations)) {
+      for (const item of companyExpectations) {
+        if (!item.skill || typeof item.expectation !== 'number') {
+          return res.status(400).json({ 
+            error: 'Invalid data format',
+            details: 'Company expectations must contain skill name and expectation value'
+          });
+        }
+        if (item.expectation < 1 || item.expectation > 5 || !Number.isInteger(item.expectation)) {
+          return res.status(400).json({ 
+            error: 'Invalid data format',
+            details: 'Expectation values must be integers between 1 and 5'
+          });
+        }
+      }
+    }
+
+    // Validate rating gaps
+    if (ratingGaps && Array.isArray(ratingGaps)) {
+      for (const item of ratingGaps) {
+        if (!item.skill || typeof item.gap !== 'number') {
+          return res.status(400).json({ 
+            error: 'Invalid data format',
+            details: 'Rating gaps must contain skill name and gap value'
+          });
+        }
+        if (item.gap < -4 || item.gap > 4 || !Number.isInteger(item.gap)) {
+          return res.status(400).json({ 
+            error: 'Invalid data format',
+            details: 'Gap values must be integers between -4 and 4'
+          });
+        }
+      }
+    }
+
+    // Validate overall manager review
+    if (overallManagerReview && typeof overallManagerReview === 'string') {
+      if (overallManagerReview.length > 5000) {
+        return res.status(400).json({ 
+          error: 'Invalid data format',
+          details: 'Overall review text must not exceed 5000 characters'
+        });
+      }
+    }
+
+    // Check if employee response exists
+    const existingResponse = await db.collection('employee_responses').findOne({ _id: objectId });
+    if (!existingResponse) {
+      console.error('❌ Response not found:', id);
+      return res.status(404).json({ error: 'Response not found' });
+    }
+
+    console.log('✅ Response found, updating with manager review data...');
+
+    // Update the document with manager review data
+    const result = await db.collection('employee_responses').updateOne(
+      { _id: objectId },
+      {
+        $set: {
+          manager_ratings: managerRatings || [],
+          company_expectations: companyExpectations || [],
+          rating_gaps: ratingGaps || [],
+          overall_manager_review: overallManagerReview || '',
+          manager_review_timestamp: new Date()
+        }
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      console.error('❌ No document matched for update:', id);
+      return res.status(404).json({ error: 'Response not found' });
+    }
+
+    console.log('✅ Manager review saved successfully for response:', id);
+
+    res.json({ 
+      message: 'Manager review saved successfully',
+      id: id
+    });
+  } catch (error) {
+    console.error('❌ Error saving manager review:', error);
+    res.status(500).json({ 
+      error: 'Failed to save manager review',
+      details: error.message
+    });
+  }
+});
+
 app.get('/api/schemas', requireDB, async (req, res) => {
   try {
     const schema = await db.collection('form_schemas')
@@ -330,6 +474,32 @@ app.get('/api/schemas', requireDB, async (req, res) => {
   } catch (error) {
     console.error('Error fetching schema:', error);
     res.status(500).json({ error: 'Failed to fetch schema' });
+  }
+});
+
+// Add the missing POST /api/schemas endpoint
+app.post('/api/schemas', requireDB, async (req, res) => {
+  try {
+    const { schema } = req.body;
+
+    if (!schema) {
+      return res.status(400).json({ error: 'Schema is required' });
+    }
+
+    const result = await db.collection('form_schemas').insertOne({
+      schema,
+      version: Date.now(),
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    res.json({ 
+      id: result.insertedId, 
+      message: 'Schema created successfully' 
+    });
+  } catch (error) {
+    console.error('Error creating schema:', error);
+    res.status(500).json({ error: 'Failed to create schema' });
   }
 });
 
@@ -371,6 +541,7 @@ app.put('/api/schemas/:id', requireDB, async (req, res) => {
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
+
 // ========== SERVER STARTUP ==========
 const startServer = async () => {
   try {

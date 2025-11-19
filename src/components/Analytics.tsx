@@ -773,9 +773,9 @@ export default function Analytics() {
       {/* --- Skills by Section & Ratings/Top Skills --- */}
       <div className="space-y-8">
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid  gap-8">
           {/* Top Rated Skills List (Progress Bars) */}
-          <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6">
+          {/* <div className="bg-white rounded-xl shadow-xl ring-1 ring-black/5 p-6">
             <h3 className="text-2xl font-bold text-gray-800 mb-6">Top Rated Skills (Top 5)</h3>
             <div className="space-y-6">
               {topRatedSkills.length > 0 ? (
@@ -806,41 +806,43 @@ export default function Analytics() {
                 <p className="text-gray-500 italic">No rating data available for visualization.</p>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Skill Ratings List (Stars) */}
           <div className="bg-white rounded-xl shadow-2xl ring-1 ring-black/5 p-6">
             <h3 className="text-xl font-bold text-gray-800 mb-6">Skill Proficiency Overview</h3>
-            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 gap-4 max-h-[420px] overflow-y-auto pr-2">
               {skillAnalytics.length > 0 ? (
                 skillAnalytics.map((skill, index) => (
                   <div
                     key={index}
-                    className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition duration-150"
+                    className="flex justify-between items-center p-3 rounded-lg hover:bg-gray-50 transition duration-150 border border-gray-100"
                   >
-                    <span className="text-base text-gray-700 flex-1 font-medium">
+                    <span className="text-sm text-gray-700 flex-1 font-medium">
                       {skill.skill}
                     </span>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <div className="flex gap-0.5">
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            size={18}
+                            size={16}
                             fill={i < Math.round(skill.avgRating) ? "#FBBF24" : "none"} // Yellow 400
                             stroke={i < Math.round(skill.avgRating) ? "#FBBF24" : "#D1D5DB"} // Gray 300
                             className="transition duration-100"
                           />
                         ))}
                       </div>
-                      <span className="text-base font-bold text-indigo-700 w-8 text-right">
-                        {skill.avgRating}
+                      <span className="text-sm font-bold text-indigo-700 w-6 text-right">
+                        {skill.avgRating.toFixed(1)}
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="text-gray-500 italic">No ratings data available for overview.</p>
+                <div className="col-span-2">
+                  <p className="text-gray-500 italic text-center py-4">No ratings data available for overview.</p>
+                </div>
               )}
             </div>
           </div>

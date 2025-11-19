@@ -9,7 +9,9 @@ import {
   Download,
   Columns,
   Search,
-  AlertCircle
+  AlertCircle,
+  CheckCircle,
+  Edit
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { api } from '../lib/api';
@@ -111,6 +113,12 @@ interface EmployeeResponse {
   skill_ratings: Array<{ skill: string; rating: number }>;
   additional_skills: string;
   timestamp?: string;
+  // Manager review fields
+  manager_ratings?: Array<{ skill: string; rating: number }>;
+  company_expectations?: Array<{ skill: string; expectation: number }>;
+  rating_gaps?: Array<{ skill: string; gap: number }>;
+  overall_manager_review?: string;
+  manager_review_timestamp?: string;
 }
 
 // --- Main Component ---
@@ -130,11 +138,6 @@ export default function Responses() {
   // --- Review State ---
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [reviewedEmployees, setReviewedEmployees] = useState<Set<string>>(new Set());
-
-  // Check if employee has manager review (placeholder - you'll need to implement actual storage)
-  const hasManagerReview = (employeeId: string) => {
-    return reviewedEmployees.has(employeeId);
-  };
 
   // --- UI/Filter State ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -288,6 +291,10 @@ export default function Responses() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const hasManagerReview = (employee: EmployeeResponse) => {
+    return employee.manager_ratings && employee.manager_ratings.length > 0;
   };
 
   // --- Filtering & UI Helpers ---
@@ -912,6 +919,7 @@ export default function Responses() {
                       'actions': 'Actions'
                     };
                     const title = titleMap[hdr] || hdr;
+
                     return (
                       <th
                         key={hdr}
@@ -1045,7 +1053,6 @@ export default function Responses() {
                           ${hdr === 'email' ? 'sticky left-[236px] w-[250px] z-20 bg-white text-left' : ''}
                         `;
 
-
                         // Action buttons cell
                         if (hdr === 'actions') {
                           return (
@@ -1143,9 +1150,9 @@ export default function Responses() {
                                 >
                                   {value}
                                 </button>
-                                {/* Green tick for reviewed employees */}
-                                {displayData._id && hasManagerReview(displayData._id) && (
-                                  <span title="Manager review completed">
+                                {/* Review status indicator */}
+                                {hasManagerReview(response) ? (
+                                  <span title="Manager review completed" className="flex items-center gap-1">
                                     <svg
                                       className="w-4 h-4 text-green-500"
                                       fill="currentColor"
@@ -1157,6 +1164,9 @@ export default function Responses() {
                                         clipRule="evenodd"
                                       />
                                     </svg>
+                                  </span>
+                                ) : (
+                                  <span title="Manager review pending" className="flex items-center gap-1">
                                   </span>
                                 )}
                               </div>

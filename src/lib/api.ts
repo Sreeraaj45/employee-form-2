@@ -18,6 +18,12 @@ interface EmployeeResponse {
   skill_ratings: Array<{ skill: string; rating: number }>;
   additional_skills: string;
   timestamp?: string;
+  // Manager review fields
+  manager_ratings?: Array<{ skill: string; rating: number }>;
+  company_expectations?: Array<{ skill: string; expectation: number }>;
+  rating_gaps?: Array<{ skill: string; gap: number }>;
+  overall_manager_review?: string;
+  manager_review_timestamp?: string;
 }
 
 interface FormSchema {
@@ -68,16 +74,22 @@ export const api = {
       let errorMessage = `Failed to create response: ${response.status}`;
       let errorDetails = '';
       
+      // Read the response body as text first, then try to parse as JSON
       try {
-        const errorData = await response.json();
-        console.error('🔍 Backend error response:', errorData);
-        errorMessage = errorData.error || errorData.message || errorMessage;
-        errorDetails = errorData.details || errorData.code || '';
-      } catch (parseError) {
-        // If response is not JSON, get text
-        const errorText = await response.text();
-        console.error('🔍 Backend error text:', errorText);
-        errorMessage = errorText || errorMessage;
+        const responseText = await response.text();
+        console.error('🔍 Backend error response:', responseText);
+        
+        // Try to parse as JSON
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+          errorDetails = errorData.details || errorData.code || '';
+        } catch (jsonError) {
+          // If not JSON, use the text directly
+          errorMessage = responseText || errorMessage;
+        }
+      } catch (textError) {
+        console.error('🔍 Could not read error response body');
       }
       
       const fullError = errorDetails ? `${errorMessage} - ${errorDetails}` : errorMessage;
@@ -136,5 +148,57 @@ export const api = {
       body: JSON.stringify({ schema })
     });
     if (!response.ok) throw new Error('Failed to update schema');
+  },
+
+  async saveManagerReview(
+    id: string,
+    data: {
+      managerRatings: Array<{ skill: string; rating: number }>;
+      companyExpectations: Array<{ skill: string; expectation: number }>;
+      ratingGaps: Array<{ skill: string; gap: number }>;
+      overallManagerReview: string;
+    }
+  ): Promise<void> {
+    console.log('📤 Saving manager review for response:', id);
+    console.log('📊 Manager review data:', data);
+    
+    const response = await fetch(`${API_BASE_URL}/responses/${id}/manager-review`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    
+    console.log('📡 Response status:', response.status);
+    
+    if (!response.ok) {
+      // Get detailed error message from response body
+      let errorMessage = `Failed to save manager review: ${response.status}`;
+      let errorDetails = '';
+      
+      // Read the response body as text first, then try to parse as JSON
+      try {
+        const responseText = await response.text();
+        console.error('🔍 Backend error response:', responseText);
+        
+        // Try to parse as JSON
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorData.message || errorMessage;
+          errorDetails = errorData.details || '';
+        } catch (jsonError) {
+          // If not JSON, use the text directly
+          errorMessage = responseText || errorMessage;
+        }
+      } catch (textError) {
+        console.error('🔍 Could not read error response body');
+      }
+      
+      const fullError = errorDetails ? `${errorMessage} - ${errorDetails}` : errorMessage;
+      console.error('❌ API Error:', fullError);
+      throw new Error(fullError);
+    }
+    
+    const result = await response.json();
+    console.log('✅ Manager review saved successfully:', result);
   }
 };
