@@ -86,6 +86,7 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
         .header {
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 20px;
           margin-bottom: 30px;
           border-bottom: 3px solid #4F46E5;
@@ -100,7 +101,7 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
         }
         
         .header-content {
-          flex: 1;
+          text-align: left;
         }
         
         .header h1 {
@@ -232,8 +233,8 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
         }
         
         .star {
-          width: 12px;
-          height: 12px;
+          font-size: 14px;
+          line-height: 1;
         }
         
         .star-filled {
@@ -242,13 +243,14 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
         
         .star-empty {
           color: #D1D5DB;
+          font-weight: 300;
         }
         
-        .star-expectation {
+        .star-expectation-filled {
           color: #10B981;
         }
         
-        .star-manager {
+        .star-manager-filled {
           color: #3B82F6;
         }
         
@@ -259,15 +261,15 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
         }
         
         .rating-label.expectation {
-          color: #059669;
+          color: #047857;
         }
         
         .rating-label.self {
-          color: #D97706;
+          color: #374151;
         }
         
         .rating-label.manager {
-          color: #2563EB;
+          color: #1D4ED8;
         }
         
         .gap-badge {
@@ -325,6 +327,10 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
           text-align: center;
           page-break-before: always;
           page-break-inside: avoid;
+          min-height: calc(100vh - 40px);
+          display: flex;
+          flex-direction: column;
+          position: relative;
         }
         
         .radar-chart-section h3 {
@@ -335,17 +341,23 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
         
         .radar-chart-section img {
           max-width: 100%;
+          max-height: 70vh;
           height: auto;
           border-radius: 4px;
+          margin-bottom: auto;
         }
         
         .radar-footer {
-          margin-top: 30px;
+          margin-top: auto;
           padding-top: 20px;
           border-top: 2px solid #E5E7EB;
           text-align: center;
           font-size: 11px;
           color: #6B7280;
+          position: absolute;
+          bottom: 20px;
+          left: 20px;
+          right: 20px;
         }
         
         @media print {
@@ -411,7 +423,7 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
               <td class="rating-cell">
                 <div class="stars">
                   ${[1, 2, 3, 4, 5].map(star => 
-                    `<span class="star ${star <= review.expectation ? 'star-expectation' : 'star-empty'}">★</span>`
+                    `<span class="star ${star <= review.expectation ? 'star-expectation-filled' : 'star-empty'}">${star <= review.expectation ? '★' : '☆'}</span>`
                   ).join('')}
                 </div>
                 <span class="rating-label expectation">${RATING_LABELS[review.expectation]}</span>
@@ -419,7 +431,7 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
               <td class="rating-cell">
                 <div class="stars">
                   ${[1, 2, 3, 4, 5].map(star => 
-                    `<span class="star ${star <= review.selfRating ? 'star-filled' : 'star-empty'}">★</span>`
+                    `<span class="star ${star <= review.selfRating ? 'star-filled' : 'star-empty'}">${star <= review.selfRating ? '★' : '☆'}</span>`
                   ).join('')}
                 </div>
                 <span class="rating-label self">${RATING_LABELS[review.selfRating]}</span>
@@ -427,7 +439,7 @@ export const printReview = async ({ employee, skillReviews, overallManagerReview
               <td class="rating-cell">
                 <div class="stars">
                   ${[1, 2, 3, 4, 5].map(star => 
-                    `<span class="star ${star <= review.managerRating ? 'star-manager' : 'star-empty'}">★</span>`
+                    `<span class="star ${star <= review.managerRating ? 'star-manager-filled' : 'star-empty'}">${star <= review.managerRating ? '★' : '☆'}</span>`
                   ).join('')}
                 </div>
                 <span class="rating-label manager">${RATING_LABELS[review.managerRating]}</span>
